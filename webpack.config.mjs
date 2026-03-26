@@ -76,6 +76,10 @@ export default (env = {}, argv = {}) => {
 							from: `src/manifest/${browser}.json`,
 							to: "manifest.json",
 						},
+						{
+							from: "src/assets/icons",
+							to: "icons",
+						},
 					],
 				}),
 			],
