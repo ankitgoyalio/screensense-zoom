@@ -24,6 +24,8 @@ Use these sources as the default reference order whenever they are relevant:
 - Prefer `bun install` over `npm install`.
 - Prefer `bun run <script>` over `npm run <script>`.
 - Do not introduce `package-lock.json` or npm-specific workflow requirements.
+- Never edit `package.json` directly.
+- If a `package.json` change is needed, tell the user exactly what to edit and let the user make that change themselves.
 
 ## Skills
 
