@@ -1,17 +1,40 @@
 /* global chrome */
 
 const screenContextByTabId = new Map();
-const SCREEN_CONTEXT_STORAGE_KEY = "screenContextByTabId";
 
-async function readStoredScreenContexts() {
-  const stored = await chrome.storage.session.get(SCREEN_CONTEXT_STORAGE_KEY);
-  return stored[SCREEN_CONTEXT_STORAGE_KEY] ?? {};
+function createScreenContextStorageKey(tabId) {
+  return `screenContext_${tabId}`;
 }
 
-async function writeStoredScreenContexts(screenContextsByTabId) {
-  await chrome.storage.session.set({
-    [SCREEN_CONTEXT_STORAGE_KEY]: screenContextsByTabId
-  });
+async function readStoredScreenContextForTab(tabId) {
+  const storageKey = createScreenContextStorageKey(tabId);
+
+  try {
+    const stored = await chrome.storage.session.get(storageKey);
+    return stored[storageKey];
+  } catch (error) {
+    console.error("[ScreenSense] failed to read screen context", {
+      storageKey,
+      error
+    });
+    return undefined;
+  }
+}
+
+async function writeStoredScreenContextForTab(tabId, screenContext) {
+  const storageKey = createScreenContextStorageKey(tabId);
+
+  try {
+    await chrome.storage.session.set({
+      [storageKey]: screenContext
+    });
+  } catch (error) {
+    console.error("[ScreenSense] failed to write screen context", {
+      storageKey,
+      error
+    });
+    throw error;
+  }
 }
 
 export async function getScreenContextForTab(tabId) {
@@ -19,8 +42,7 @@ export async function getScreenContextForTab(tabId) {
     return screenContextByTabId.get(tabId);
   }
 
-  const storedScreenContexts = await readStoredScreenContexts();
-  const screenContext = storedScreenContexts[String(tabId)];
+  const screenContext = await readStoredScreenContextForTab(tabId);
 
   if (screenContext) {
     screenContextByTabId.set(tabId, screenContext);
@@ -31,22 +53,10 @@ export async function getScreenContextForTab(tabId) {
 
 export async function setScreenContextForTab(tabId, screenContext) {
   screenContextByTabId.set(tabId, screenContext);
-
-  const storedScreenContexts = await readStoredScreenContexts();
-  storedScreenContexts[String(tabId)] = screenContext;
-  await writeStoredScreenContexts(storedScreenContexts);
+  await writeStoredScreenContextForTab(tabId, screenContext);
 }
 
 export async function removeScreenContextForTab(tabId) {
   screenContextByTabId.delete(tabId);
-
-  const storedScreenContexts = await readStoredScreenContexts();
-  const storageKey = String(tabId);
-
-  if (!(storageKey in storedScreenContexts)) {
-    return;
-  }
-
-  delete storedScreenContexts[storageKey];
-  await writeStoredScreenContexts(storedScreenContexts);
+  await chrome.storage.session.remove(createScreenContextStorageKey(tabId));
 }

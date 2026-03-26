@@ -1,14 +1,32 @@
 /* global chrome */
 
 const ZOOM_RULES_STORAGE_KEY = "zoomRulesByDomainAndResolution";
+let zoomRulesWriteQueue = Promise.resolve();
 
 function createPreferenceKey({ domain, resolutionKey }) {
   return `${domain}::${resolutionKey}`;
 }
 
 async function readZoomRules() {
-  const stored = await chrome.storage.local.get(ZOOM_RULES_STORAGE_KEY);
-  return stored[ZOOM_RULES_STORAGE_KEY] ?? {};
+  try {
+    const stored = await chrome.storage.local.get(ZOOM_RULES_STORAGE_KEY);
+    return stored[ZOOM_RULES_STORAGE_KEY] ?? {};
+  } catch (error) {
+    console.error("[ScreenSense] failed to read zoom rules", error);
+    return {};
+  }
+}
+
+function queueZoomRulesWrite(operation) {
+  const queuedOperation = zoomRulesWriteQueue.then(operation);
+  zoomRulesWriteQueue = queuedOperation.catch(() => undefined);
+  return queuedOperation;
+}
+
+async function writeZoomRules(rules) {
+  await chrome.storage.local.set({
+    [ZOOM_RULES_STORAGE_KEY]: rules
+  });
 }
 
 export async function getSavedZoomPreference({ domain, resolutionKey }) {
@@ -17,17 +35,16 @@ export async function getSavedZoomPreference({ domain, resolutionKey }) {
 }
 
 export async function deleteZoomPreference({ domain, resolutionKey }) {
-  const rules = await readZoomRules();
   const preferenceKey = createPreferenceKey({ domain, resolutionKey });
+  await queueZoomRulesWrite(async () => {
+    const rules = await readZoomRules();
 
-  if (!(preferenceKey in rules)) {
-    return;
-  }
+    if (!(preferenceKey in rules)) {
+      return;
+    }
 
-  delete rules[preferenceKey];
-
-  await chrome.storage.local.set({
-    [ZOOM_RULES_STORAGE_KEY]: rules
+    delete rules[preferenceKey];
+    await writeZoomRules(rules);
   });
 }
 
@@ -39,20 +56,20 @@ export async function saveZoomPreference({
   zoomFactor,
   zoomPercent
 }) {
-  const rules = await readZoomRules();
   const preferenceKey = createPreferenceKey({ domain, resolutionKey });
+  await queueZoomRulesWrite(async () => {
+    const rules = await readZoomRules();
 
-  rules[preferenceKey] = {
-    domain,
-    resolutionKey,
-    normalizedScreenWidth,
-    normalizedScreenHeight,
-    zoomFactor,
-    zoomPercent,
-    updatedAt: Date.now()
-  };
+    rules[preferenceKey] = {
+      domain,
+      resolutionKey,
+      normalizedScreenWidth,
+      normalizedScreenHeight,
+      zoomFactor,
+      zoomPercent,
+      updatedAt: Date.now()
+    };
 
-  await chrome.storage.local.set({
-    [ZOOM_RULES_STORAGE_KEY]: rules
+    await writeZoomRules(rules);
   });
 }

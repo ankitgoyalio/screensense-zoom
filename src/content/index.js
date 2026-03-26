@@ -20,6 +20,7 @@ function createNormalizedScreenContext() {
 }
 
 let lastReportedResolutionKey;
+let resizeTimeout;
 
 function reportScreenContext(force = false) {
   const screenContext = createNormalizedScreenContext();
@@ -30,9 +31,11 @@ function reportScreenContext(force = false) {
 
   lastReportedResolutionKey = screenContext.resolutionKey;
 
-  void chrome.runtime.sendMessage({
+  chrome.runtime.sendMessage({
     type: REPORT_SCREEN_CONTEXT_MESSAGE,
     payload: screenContext
+  }).catch(() => {
+    // Ignore extension invalidation during reload/update.
   });
 }
 
@@ -44,7 +47,10 @@ if (!globalThis[CONTENT_LISTENER_READY_FLAG]) {
   });
 
   window.addEventListener("resize", () => {
-    reportScreenContext();
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      reportScreenContext();
+    }, 150);
   });
 
   window.addEventListener("pageshow", () => {

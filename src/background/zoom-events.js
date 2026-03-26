@@ -6,26 +6,25 @@ import {
 } from "../constants/zoom.js";
 import { getScreenContextForTab } from "./screen-context-cache.js";
 import { deleteZoomPreference, saveZoomPreference } from "./zoom-store.js";
-
-const DEFAULT_ZOOM_FACTOR = 1;
-
-function getDomainFromUrl(url) {
-  if (!url) {
-    return undefined;
-  }
-
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return undefined;
-  }
-}
+import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 
 async function persistZoomPreference(tabId, payload) {
-  const [tab, screenContext] = await Promise.all([
-    chrome.tabs.get(tabId),
-    getScreenContextForTab(tabId)
-  ]);
+  let tab;
+  let screenContext;
+
+  try {
+    [tab, screenContext] = await Promise.all([
+      chrome.tabs.get(tabId),
+      getScreenContextForTab(tabId)
+    ]);
+  } catch (error) {
+    console.debug("[ScreenSense] tab unavailable for zoom persistence", {
+      tabId,
+      error
+    });
+    return;
+  }
+
   const domain = getDomainFromUrl(tab.url);
 
   if (!domain || !screenContext?.resolutionKey) {

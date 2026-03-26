@@ -10,6 +10,8 @@ import {
 } from "./screen-context-cache.js";
 import { ensureZoomPreferenceForTab } from "./tab-zoom-state.js";
 
+let listenersRegistered = false;
+
 async function ensureContentScript(tabId) {
   await chrome.scripting.executeScript({
     target: { tabId },
@@ -57,6 +59,12 @@ async function requestScreenContextForActiveTab(windowId) {
 }
 
 export function registerScreenContextListeners() {
+  if (listenersRegistered) {
+    return;
+  }
+
+  listenersRegistered = true;
+
   chrome.runtime.onMessage.addListener((message, sender) => {
     if (message?.type !== REPORT_SCREEN_CONTEXT_MESSAGE || !sender.tab?.id) {
       return;

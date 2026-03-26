@@ -3,25 +3,22 @@
 import { normalizeZoomFactor } from "../constants/zoom.js";
 import { getScreenContextForTab } from "./screen-context-cache.js";
 import { getSavedZoomPreference } from "./zoom-store.js";
-
-const DEFAULT_ZOOM_FACTOR = 1;
-function getDomainFromUrl(url) {
-  if (!url) {
-    return undefined;
-  }
-
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return undefined;
-  }
-}
+import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 
 async function getTabZoomState(tabId) {
-  const [tab, screenContext] = await Promise.all([
-    chrome.tabs.get(tabId),
-    getScreenContextForTab(tabId)
-  ]);
+  let tab;
+  let screenContext;
+
+  try {
+    [tab, screenContext] = await Promise.all([
+      chrome.tabs.get(tabId),
+      getScreenContextForTab(tabId)
+    ]);
+  } catch (error) {
+    console.debug("[ScreenSense] failed to get tab state", { tabId, error });
+    return undefined;
+  }
+
   const domain = getDomainFromUrl(tab.url);
 
   if (!domain || !screenContext?.resolutionKey) {

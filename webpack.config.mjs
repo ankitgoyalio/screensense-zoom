@@ -50,23 +50,14 @@ export default (env = {}, argv = {}) => {
 			},
 		},
 		{
-			...createSharedSettings({
-				isProduction,
-				outputRoot,
-				clean: false,
-			}),
+			...sharedSettings,
 			name: "content",
 			target: "web",
 			entry: {
 				content: "./src/content/index.js",
 			},
 			output: {
-				...createSharedSettings({
-					browser,
-					isProduction,
-					outputRoot,
-					clean: false,
-				}).output,
+				...sharedSettings.output,
 				filename: "content.js",
 			},
 			plugins: [
