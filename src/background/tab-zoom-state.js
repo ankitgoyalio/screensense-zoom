@@ -16,11 +16,13 @@ async function setTabZoom(tabId, zoomFactor, logMessage) {
 async function getTabZoomState(tabId) {
   let tab;
   let screenContext;
+  let currentZoomFactor;
 
   try {
-    [tab, screenContext] = await Promise.all([
+    [tab, screenContext, currentZoomFactor] = await Promise.all([
       chrome.tabs.get(tabId),
-      getScreenContextForTab(tabId)
+      getScreenContextForTab(tabId),
+      chrome.tabs.getZoom(tabId).then(normalizeZoomFactor)
     ]);
   } catch (error) {
     console.debug("[ScreenSense] failed to get tab state", { tabId, error });
@@ -33,7 +35,6 @@ async function getTabZoomState(tabId) {
     return undefined;
   }
 
-  const currentZoomFactor = normalizeZoomFactor(await chrome.tabs.getZoom(tabId));
   const currentZoomPercent = Math.round(currentZoomFactor * 100);
   const savedPreference = await getSavedZoomPreference({
     domain,

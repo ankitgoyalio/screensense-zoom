@@ -67,8 +67,20 @@ export async function getScreenContextForTab(tabId) {
 }
 
 export async function setScreenContextForTab(tabId, screenContext) {
+  const previousScreenContext = screenContextByTabId.get(tabId);
   screenContextByTabId.set(tabId, screenContext);
-  await writeStoredScreenContextForTab(tabId, screenContext);
+
+  try {
+    await writeStoredScreenContextForTab(tabId, screenContext);
+  } catch (error) {
+    if (previousScreenContext !== undefined) {
+      screenContextByTabId.set(tabId, previousScreenContext);
+    } else {
+      screenContextByTabId.delete(tabId);
+    }
+
+    throw error;
+  }
 }
 
 export async function removeScreenContextForTab(tabId) {

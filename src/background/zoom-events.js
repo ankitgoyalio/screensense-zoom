@@ -38,22 +38,30 @@ async function persistZoomPreference(tabId, payload) {
     return;
   }
 
-  if (payload.normalizedZoomFactor === DEFAULT_ZOOM_FACTOR) {
-    await deleteZoomPreference({
-      domain,
-      resolutionKey: screenContext.resolutionKey
-    });
-    return;
-  }
+  try {
+    if (payload.normalizedZoomFactor === DEFAULT_ZOOM_FACTOR) {
+      await deleteZoomPreference({
+        domain,
+        resolutionKey: screenContext.resolutionKey
+      });
+      return;
+    }
 
-  await saveZoomPreference({
-    domain,
-    resolutionKey: screenContext.resolutionKey,
-    normalizedScreenWidth: screenContext.normalizedScreenWidth,
-    normalizedScreenHeight: screenContext.normalizedScreenHeight,
-    zoomFactor: payload.normalizedZoomFactor,
-    zoomPercent: payload.zoomPercent
-  });
+    await saveZoomPreference({
+      domain,
+      resolutionKey: screenContext.resolutionKey,
+      normalizedScreenWidth: screenContext.normalizedScreenWidth,
+      normalizedScreenHeight: screenContext.normalizedScreenHeight,
+      zoomFactor: payload.normalizedZoomFactor,
+      zoomPercent: payload.zoomPercent
+    });
+  } catch (error) {
+    console.debug("[ScreenSense] failed to persist zoom preference", {
+      tabId,
+      domain,
+      error
+    });
+  }
 }
 
 export function registerZoomChangeListener() {
@@ -89,6 +97,8 @@ export function registerZoomChangeListener() {
       isSupportedZoomFactor
     };
 
+    // MV3 may terminate the worker before this best-effort write finishes.
+    // That trade-off is acceptable here because the event is user initiated.
     void persistZoomPreference(tabId, payload);
   });
 }

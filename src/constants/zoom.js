@@ -1,8 +1,8 @@
 export const SUPPORTED_ZOOM_FACTORS = [
   0.25,
-  0.33,
+  1 / 3,
   0.5,
-  0.67,
+  2 / 3,
   0.75,
   0.8,
   0.9,
@@ -19,12 +19,21 @@ export const SUPPORTED_ZOOM_FACTORS = [
 ];
 
 const ZOOM_FACTOR_PRECISION = 2;
+const SUPPORTED_ZOOM_FACTOR_EPSILON = 0.001;
 
 export function normalizeZoomFactor(zoomFactor) {
   const normalizedInput = Number(zoomFactor);
 
   if (!Number.isFinite(normalizedInput)) {
     return Number.NaN;
+  }
+
+  const supportedZoomFactor = SUPPORTED_ZOOM_FACTORS.find((value) => {
+    return Math.abs(value - normalizedInput) < SUPPORTED_ZOOM_FACTOR_EPSILON;
+  });
+
+  if (supportedZoomFactor !== undefined) {
+    return supportedZoomFactor;
   }
 
   return Number(normalizedInput.toFixed(ZOOM_FACTOR_PRECISION));

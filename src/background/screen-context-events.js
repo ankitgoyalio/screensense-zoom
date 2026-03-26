@@ -12,7 +12,7 @@ import { getTabAccessState } from "./tab-access.js";
 import { ensureZoomPreferenceForTab } from "./tab-zoom-state.js";
 
 let listenersRegistered = false;
-let boundsChangeTimeout;
+const boundsChangeTimeouts = new Map();
 const BOUNDS_CHANGE_DEBOUNCE_MS = 200;
 
 async function ensureContentScript(tab) {
@@ -125,7 +125,12 @@ export function registerScreenContextListeners() {
     void (async () => {
       await setScreenContextForTab(tabId, payload);
       await ensureZoomPreferenceForTab(tabId);
-    })();
+    })().catch((error) => {
+      console.debug("[ScreenSense] failed to process screen context", {
+        tabId,
+        error
+      });
+    });
   });
 
   chrome.tabs.onActivated.addListener(({ tabId }) => {
@@ -145,10 +150,11 @@ export function registerScreenContextListeners() {
       return;
     }
 
-    clearTimeout(boundsChangeTimeout);
-    boundsChangeTimeout = setTimeout(() => {
+    clearTimeout(boundsChangeTimeouts.get(window.id));
+    boundsChangeTimeouts.set(window.id, setTimeout(() => {
+      boundsChangeTimeouts.delete(window.id);
       void requestScreenContextForActiveTab(window.id);
-    }, BOUNDS_CHANGE_DEBOUNCE_MS);
+    }, BOUNDS_CHANGE_DEBOUNCE_MS));
   });
 
   chrome.tabs.onRemoved.addListener((tabId) => {

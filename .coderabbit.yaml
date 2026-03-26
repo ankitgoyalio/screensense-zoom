@@ -53,7 +53,7 @@ reviews:
         - "!**/*.min.*"
         - "!**/*.snap"
     path_instructions:
-        - path: "manifest.json"
+        - path: "src/manifest/**/*.json"
           instructions: >-
               Focus on MV3 correctness, minimum necessary permissions, host
               access, service worker wiring, and whether manifest entries match

@@ -10,9 +10,7 @@ function getTabUrl(tab) {
   return typeof tab?.url === "string" ? tab.url : undefined;
 }
 
-async function hasHostPermissionForUrl(url) {
-  const { origin } = new URL(url);
-
+async function hasHostPermissionForOrigin(origin) {
   return chrome.permissions.contains({
     origins: [`${origin}/*`]
   });
@@ -37,7 +35,7 @@ export async function getTabAccessState(tab) {
     return createAccessResult(false, `unsupported_scheme:${parsedUrl.protocol}`);
   }
 
-  const hasHostPermission = await hasHostPermissionForUrl(url);
+  const hasHostPermission = await hasHostPermissionForOrigin(parsedUrl.origin);
 
   if (!hasHostPermission) {
     return createAccessResult(false, "missing_host_permission");

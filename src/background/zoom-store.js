@@ -24,9 +24,14 @@ function queueZoomRulesWrite(operation) {
 }
 
 async function writeZoomRules(rules) {
-  await chrome.storage.local.set({
-    [ZOOM_RULES_STORAGE_KEY]: rules
-  });
+  try {
+    await chrome.storage.local.set({
+      [ZOOM_RULES_STORAGE_KEY]: rules
+    });
+  } catch (error) {
+    console.error("[ScreenSense] failed to write zoom rules", error);
+    throw error;
+  }
 }
 
 export async function getSavedZoomPreference({ domain, resolutionKey }) {
