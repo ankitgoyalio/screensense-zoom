@@ -20,7 +20,7 @@ function getDomainFromUrl(url) {
 async function getTabZoomState(tabId) {
   const [tab, screenContext] = await Promise.all([
     chrome.tabs.get(tabId),
-    Promise.resolve(getScreenContextForTab(tabId))
+    getScreenContextForTab(tabId)
   ]);
   const domain = getDomainFromUrl(tab.url);
 

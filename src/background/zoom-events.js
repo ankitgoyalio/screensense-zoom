@@ -24,7 +24,7 @@ function getDomainFromUrl(url) {
 async function persistZoomPreference(tabId, payload) {
   const [tab, screenContext] = await Promise.all([
     chrome.tabs.get(tabId),
-    Promise.resolve(getScreenContextForTab(tabId))
+    getScreenContextForTab(tabId)
   ]);
   const domain = getDomainFromUrl(tab.url);
 

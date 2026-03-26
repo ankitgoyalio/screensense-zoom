@@ -21,5 +21,11 @@ export const SUPPORTED_ZOOM_FACTORS = [
 const ZOOM_FACTOR_PRECISION = 2;
 
 export function normalizeZoomFactor(zoomFactor) {
-  return Number(zoomFactor.toFixed(ZOOM_FACTOR_PRECISION));
+  const normalizedInput = Number(zoomFactor);
+
+  if (!Number.isFinite(normalizedInput)) {
+    return Number.NaN;
+  }
+
+  return Number(normalizedInput.toFixed(ZOOM_FACTOR_PRECISION));
 }

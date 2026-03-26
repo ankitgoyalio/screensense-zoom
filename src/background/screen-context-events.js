@@ -63,8 +63,10 @@ export function registerScreenContextListeners() {
     }
 
     const tabId = sender.tab.id;
-    setScreenContextForTab(tabId, message.payload);
-    void ensureZoomPreferenceForTab(tabId);
+    void (async () => {
+      await setScreenContextForTab(tabId, message.payload);
+      await ensureZoomPreferenceForTab(tabId);
+    })();
   });
 
   chrome.tabs.onActivated.addListener(({ tabId }) => {
@@ -88,6 +90,6 @@ export function registerScreenContextListeners() {
   });
 
   chrome.tabs.onRemoved.addListener((tabId) => {
-    removeScreenContextForTab(tabId);
+    void removeScreenContextForTab(tabId);
   });
 }
