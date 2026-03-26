@@ -6,6 +6,15 @@ function createScreenContextStorageKey(tabId) {
   return `screenContext_${tabId}`;
 }
 
+async function doesTabExist(tabId) {
+  try {
+    await chrome.tabs.get(tabId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function readStoredScreenContextForTab(tabId) {
   const storageKey = createScreenContextStorageKey(tabId);
 
@@ -44,10 +53,16 @@ export async function getScreenContextForTab(tabId) {
 
   const screenContext = await readStoredScreenContextForTab(tabId);
 
-  if (screenContext) {
-    screenContextByTabId.set(tabId, screenContext);
+  if (!screenContext) {
+    return undefined;
   }
 
+  if (!(await doesTabExist(tabId))) {
+    await removeScreenContextForTab(tabId);
+    return undefined;
+  }
+
+  screenContextByTabId.set(tabId, screenContext);
   return screenContext;
 }
 
@@ -57,6 +72,20 @@ export async function setScreenContextForTab(tabId, screenContext) {
 }
 
 export async function removeScreenContextForTab(tabId) {
+  const cachedScreenContext = screenContextByTabId.get(tabId);
   screenContextByTabId.delete(tabId);
-  await chrome.storage.session.remove(createScreenContextStorageKey(tabId));
+
+  try {
+    await chrome.storage.session.remove(createScreenContextStorageKey(tabId));
+  } catch (error) {
+    if (cachedScreenContext) {
+      screenContextByTabId.set(tabId, cachedScreenContext);
+    }
+
+    console.error("[ScreenSense] failed to remove screen context", {
+      tabId,
+      error
+    });
+    throw error;
+  }
 }

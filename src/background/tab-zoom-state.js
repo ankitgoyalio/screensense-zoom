@@ -5,6 +5,14 @@ import { getScreenContextForTab } from "./screen-context-cache.js";
 import { getSavedZoomPreference } from "./zoom-store.js";
 import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 
+async function setTabZoom(tabId, zoomFactor, logMessage) {
+  try {
+    await chrome.tabs.setZoom(tabId, zoomFactor);
+  } catch (error) {
+    console.debug(logMessage, { tabId, zoomFactor, error });
+  }
+}
+
 async function getTabZoomState(tabId) {
   let tab;
   let screenContext;
@@ -52,7 +60,11 @@ export async function applySavedZoomForTab(tabId) {
     return;
   }
 
-  await chrome.tabs.setZoom(tabId, tabZoomState.savedPreference.zoomFactor);
+  await setTabZoom(
+    tabId,
+    tabZoomState.savedPreference.zoomFactor,
+    "[ScreenSense] failed to apply saved zoom"
+  );
 }
 
 export async function ensureZoomPreferenceForTab(tabId) {
@@ -64,13 +76,21 @@ export async function ensureZoomPreferenceForTab(tabId) {
 
   if (tabZoomState.savedPreference?.zoomFactor) {
     if (tabZoomState.currentZoomFactor !== tabZoomState.savedPreference.zoomFactor) {
-      await chrome.tabs.setZoom(tabId, tabZoomState.savedPreference.zoomFactor);
+      await setTabZoom(
+        tabId,
+        tabZoomState.savedPreference.zoomFactor,
+        "[ScreenSense] failed to set zoom"
+      );
     }
 
     return;
   }
 
   if (tabZoomState.currentZoomFactor !== DEFAULT_ZOOM_FACTOR) {
-    await chrome.tabs.setZoom(tabId, DEFAULT_ZOOM_FACTOR);
+    await setTabZoom(
+      tabId,
+      DEFAULT_ZOOM_FACTOR,
+      "[ScreenSense] failed to set default zoom"
+    );
   }
 }

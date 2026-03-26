@@ -30,6 +30,7 @@ async function writeZoomRules(rules) {
 }
 
 export async function getSavedZoomPreference({ domain, resolutionKey }) {
+  await zoomRulesWriteQueue;
   const rules = await readZoomRules();
   return rules[createPreferenceKey({ domain, resolutionKey })];
 }

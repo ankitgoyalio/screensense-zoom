@@ -8,6 +8,8 @@ import { getScreenContextForTab } from "./screen-context-cache.js";
 import { deleteZoomPreference, saveZoomPreference } from "./zoom-store.js";
 import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 
+let listenersRegistered = false;
+
 async function persistZoomPreference(tabId, payload) {
   let tab;
   let screenContext;
@@ -55,6 +57,12 @@ async function persistZoomPreference(tabId, payload) {
 }
 
 export function registerZoomChangeListener() {
+  if (listenersRegistered) {
+    return;
+  }
+
+  listenersRegistered = true;
+
   chrome.tabs.onZoomChange.addListener((zoomChangeInfo) => {
     const { newZoomFactor, oldZoomFactor, tabId, zoomSettings } =
       zoomChangeInfo;
@@ -64,7 +72,7 @@ export function registerZoomChangeListener() {
       normalizedZoomFactor
     );
 
-    console.info("[ScreenSense] tab zoom changed", {
+    console.debug("[ScreenSense] tab zoom changed", {
       tabId,
       oldZoomFactor,
       newZoomFactor,

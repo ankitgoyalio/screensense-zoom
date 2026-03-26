@@ -8,18 +8,54 @@ import {
   removeScreenContextForTab,
   setScreenContextForTab
 } from "./screen-context-cache.js";
+import { getTabAccessState } from "./tab-access.js";
 import { ensureZoomPreferenceForTab } from "./tab-zoom-state.js";
 
 let listenersRegistered = false;
+let boundsChangeTimeout;
+const BOUNDS_CHANGE_DEBOUNCE_MS = 200;
 
-async function ensureContentScript(tabId) {
+async function ensureContentScript(tab) {
+  if (!tab?.id) {
+    throw new Error("missing tab id for content script injection");
+  }
+
+  const accessState = await getTabAccessState(tab);
+
+  if (!accessState.canAccess) {
+    throw new Error(`injection skipped: ${accessState.reason}`);
+  }
+
   await chrome.scripting.executeScript({
-    target: { tabId },
+    target: { tabId: tab.id },
     files: ["content.js"]
   });
 }
 
 async function requestScreenContext(tabId) {
+  let tab;
+
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch (error) {
+    console.debug("[ScreenSense] unable to load tab for screen context", {
+      tabId,
+      message: error?.message
+    });
+    return;
+  }
+
+  const accessState = await getTabAccessState(tab);
+
+  if (!accessState.canAccess) {
+    console.debug("[ScreenSense] skipped screen context request for inaccessible tab", {
+      tabId,
+      url: tab.url,
+      reason: accessState.reason
+    });
+    return;
+  }
+
   try {
     await chrome.tabs.sendMessage(tabId, {
       type: REQUEST_SCREEN_CONTEXT_MESSAGE
@@ -31,13 +67,14 @@ async function requestScreenContext(tabId) {
     });
 
     try {
-      await ensureContentScript(tabId);
+      await ensureContentScript(tab);
       await chrome.tabs.sendMessage(tabId, {
         type: REQUEST_SCREEN_CONTEXT_MESSAGE
       });
     } catch (injectionError) {
       console.debug("[ScreenSense] unable to request screen context", {
         tabId,
+        url: tab.url,
         message: injectionError?.message
       });
     }
@@ -70,9 +107,23 @@ export function registerScreenContextListeners() {
       return;
     }
 
+    const { payload } = message;
+
+    if (
+      typeof payload?.normalizedScreenWidth !== "number" ||
+      typeof payload?.normalizedScreenHeight !== "number" ||
+      typeof payload?.resolutionKey !== "string"
+    ) {
+      console.debug("[ScreenSense] invalid screen context payload", {
+        tabId: sender.tab.id,
+        payload
+      });
+      return;
+    }
+
     const tabId = sender.tab.id;
     void (async () => {
-      await setScreenContextForTab(tabId, message.payload);
+      await setScreenContextForTab(tabId, payload);
       await ensureZoomPreferenceForTab(tabId);
     })();
   });
@@ -94,7 +145,10 @@ export function registerScreenContextListeners() {
       return;
     }
 
-    void requestScreenContextForActiveTab(window.id);
+    clearTimeout(boundsChangeTimeout);
+    boundsChangeTimeout = setTimeout(() => {
+      void requestScreenContextForActiveTab(window.id);
+    }, BOUNDS_CHANGE_DEBOUNCE_MS);
   });
 
   chrome.tabs.onRemoved.addListener((tabId) => {

@@ -33,7 +33,7 @@ export default (env = {}, argv = {}) => {
 	const sharedSettings = createSharedSettings({
 		isProduction,
 		outputRoot,
-		clean: false,
+		clean: isProduction,
 	});
 
 	return [
