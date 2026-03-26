@@ -7,13 +7,28 @@ function createPreferenceKey({ domain, resolutionKey }) {
 }
 
 async function readZoomRules() {
-  const stored = await chrome.storage.sync.get(ZOOM_RULES_STORAGE_KEY);
+  const stored = await chrome.storage.local.get(ZOOM_RULES_STORAGE_KEY);
   return stored[ZOOM_RULES_STORAGE_KEY] ?? {};
 }
 
 export async function getSavedZoomPreference({ domain, resolutionKey }) {
   const rules = await readZoomRules();
   return rules[createPreferenceKey({ domain, resolutionKey })];
+}
+
+export async function deleteZoomPreference({ domain, resolutionKey }) {
+  const rules = await readZoomRules();
+  const preferenceKey = createPreferenceKey({ domain, resolutionKey });
+
+  if (!(preferenceKey in rules)) {
+    return;
+  }
+
+  delete rules[preferenceKey];
+
+  await chrome.storage.local.set({
+    [ZOOM_RULES_STORAGE_KEY]: rules
+  });
 }
 
 export async function saveZoomPreference({
@@ -37,7 +52,7 @@ export async function saveZoomPreference({
     updatedAt: Date.now()
   };
 
-  await chrome.storage.sync.set({
+  await chrome.storage.local.set({
     [ZOOM_RULES_STORAGE_KEY]: rules
   });
 }

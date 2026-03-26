@@ -2,11 +2,9 @@
 
 import { normalizeZoomFactor } from "../constants/zoom.js";
 import { getScreenContextForTab } from "./screen-context-cache.js";
-import { getSavedZoomPreference, saveZoomPreference } from "./zoom-store.js";
+import { getSavedZoomPreference } from "./zoom-store.js";
 
 const DEFAULT_ZOOM_FACTOR = 1;
-const DEFAULT_ZOOM_PERCENT = 100;
-
 function getDomainFromUrl(url) {
   if (!url) {
     return undefined;
@@ -74,15 +72,6 @@ export async function ensureZoomPreferenceForTab(tabId) {
 
     return;
   }
-
-  await saveZoomPreference({
-    domain: tabZoomState.domain,
-    resolutionKey: tabZoomState.screenContext.resolutionKey,
-    normalizedScreenWidth: tabZoomState.screenContext.normalizedScreenWidth,
-    normalizedScreenHeight: tabZoomState.screenContext.normalizedScreenHeight,
-    zoomFactor: DEFAULT_ZOOM_FACTOR,
-    zoomPercent: DEFAULT_ZOOM_PERCENT
-  });
 
   if (tabZoomState.currentZoomFactor !== DEFAULT_ZOOM_FACTOR) {
     await chrome.tabs.setZoom(tabId, DEFAULT_ZOOM_FACTOR);

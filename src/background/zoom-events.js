@@ -5,7 +5,9 @@ import {
   SUPPORTED_ZOOM_FACTORS
 } from "../constants/zoom.js";
 import { getScreenContextForTab } from "./screen-context-cache.js";
-import { saveZoomPreference } from "./zoom-store.js";
+import { deleteZoomPreference, saveZoomPreference } from "./zoom-store.js";
+
+const DEFAULT_ZOOM_FACTOR = 1;
 
 function getDomainFromUrl(url) {
   if (!url) {
@@ -31,6 +33,14 @@ async function persistZoomPreference(tabId, payload) {
       tabId,
       domain,
       screenContext
+    });
+    return;
+  }
+
+  if (payload.normalizedZoomFactor === DEFAULT_ZOOM_FACTOR) {
+    await deleteZoomPreference({
+      domain,
+      resolutionKey: screenContext.resolutionKey
     });
     return;
   }
