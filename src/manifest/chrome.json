@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "ScreenSense Zoom",
+  "version": "0.0.1",
+  "description": "Basic scaffold for listening to Chrome tab zoom changes.",
+  "permissions": ["tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "ScreenSense Zoom"
+  }
+}

@@ -1,32 +1,39 @@
 {
-  "name": "screensense-zoom",
-  "version": "0.0.1",
-  "description": "Browser extension for zooming and inspecting screen content.",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
-  "scripts": {
-    "lint": "eslint .",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ankitgoyalio/screensense-zoom.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/ankitgoyalio/screensense-zoom/issues"
-  },
-  "homepage": "https://github.com/ankitgoyalio/screensense-zoom#readme",
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.1.0",
-    "globals": "^17.4.0",
-    "jiti": "^2.6.1",
-    "typescript-eslint": "^8.57.2"
-  }
+	"name": "screensense-zoom",
+	"version": "0.0.1",
+	"description": "Browser extension for zooming and inspecting screen content.",
+	"main": "index.js",
+	"directories": {
+		"doc": "docs"
+	},
+	"scripts": {
+		"dev": "bun run dev:chrome",
+		"dev:chrome": "webpack --config webpack.config.mjs --watch --env BROWSER=chrome --mode development",
+		"build": "bun run build:chrome",
+		"build:chrome": "webpack --config webpack.config.mjs --env BROWSER=chrome --mode production",
+		"lint": "eslint .",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ankitgoyalio/screensense-zoom.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"bugs": {
+		"url": "https://github.com/ankitgoyalio/screensense-zoom/issues"
+	},
+	"homepage": "https://github.com/ankitgoyalio/screensense-zoom#readme",
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"copy-webpack-plugin": "^14.0.0",
+		"eslint": "^10.1.0",
+		"globals": "^17.4.0",
+		"jiti": "^2.6.1",
+		"typescript-eslint": "^8.57.2",
+		"webpack": "^5.105.4",
+		"webpack-cli": "^7.0.2"
+	}
 }
