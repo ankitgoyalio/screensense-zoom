@@ -1,19 +1,56 @@
 /* global chrome */
 
 import {
-  SHOW_ZOOM_TOAST_MESSAGE,
-  TOAST_LISTENER_READY_FLAG
+  CONTENT_LISTENER_READY_FLAG,
+  REPORT_SCREEN_CONTEXT_MESSAGE,
+  REQUEST_SCREEN_CONTEXT_MESSAGE
 } from "../constants/messages.js";
-import { showZoomToast } from "./toast.js";
 
-if (!globalThis[TOAST_LISTENER_READY_FLAG]) {
+function createNormalizedScreenContext() {
+  const width = window.screen.availWidth;
+  const height = window.screen.availHeight;
+  const normalizedScreenWidth = Math.max(width, height);
+  const normalizedScreenHeight = Math.min(width, height);
+
+  return {
+    normalizedScreenWidth,
+    normalizedScreenHeight,
+    resolutionKey: `${normalizedScreenWidth}x${normalizedScreenHeight}`
+  };
+}
+
+let lastReportedResolutionKey;
+
+function reportScreenContext(force = false) {
+  const screenContext = createNormalizedScreenContext();
+
+  if (!force && lastReportedResolutionKey === screenContext.resolutionKey) {
+    return;
+  }
+
+  lastReportedResolutionKey = screenContext.resolutionKey;
+
+  void chrome.runtime.sendMessage({
+    type: REPORT_SCREEN_CONTEXT_MESSAGE,
+    payload: screenContext
+  });
+}
+
+if (!globalThis[CONTENT_LISTENER_READY_FLAG]) {
   chrome.runtime.onMessage.addListener((message) => {
-    if (message?.type !== SHOW_ZOOM_TOAST_MESSAGE) {
-      return;
+    if (message?.type === REQUEST_SCREEN_CONTEXT_MESSAGE) {
+      reportScreenContext(true);
     }
-
-    showZoomToast(message.payload);
   });
 
-  globalThis[TOAST_LISTENER_READY_FLAG] = true;
+  window.addEventListener("resize", () => {
+    reportScreenContext();
+  });
+
+  window.addEventListener("pageshow", () => {
+    reportScreenContext(true);
+  });
+
+  reportScreenContext(true);
+  globalThis[CONTENT_LISTENER_READY_FLAG] = true;
 }

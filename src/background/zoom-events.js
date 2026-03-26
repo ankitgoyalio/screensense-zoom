@@ -4,41 +4,45 @@ import {
   normalizeZoomFactor,
   SUPPORTED_ZOOM_FACTORS
 } from "../constants/zoom.js";
-import { SHOW_ZOOM_TOAST_MESSAGE } from "../constants/messages.js";
+import { getScreenContextForTab } from "./screen-context-cache.js";
+import { saveZoomPreference } from "./zoom-store.js";
 
-async function sendZoomToastMessage(tabId, payload) {
-  await chrome.tabs.sendMessage(tabId, {
-    type: SHOW_ZOOM_TOAST_MESSAGE,
-    payload
-  });
-}
-
-async function ensureToastContentScript(tabId) {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ["content.js"]
-  });
-}
-
-async function notifyTabZoomChanged(tabId, payload) {
-  try {
-    await sendZoomToastMessage(tabId, payload);
-  } catch (error) {
-    console.debug("[ScreenSense] toast delivery missed existing tab, injecting", {
-      tabId,
-      message: error?.message
-    });
-
-    try {
-      await ensureToastContentScript(tabId);
-      await sendZoomToastMessage(tabId, payload);
-    } catch (injectionError) {
-      console.debug("[ScreenSense] unable to inject zoom toast", {
-        tabId,
-        message: injectionError?.message
-      });
-    }
+function getDomainFromUrl(url) {
+  if (!url) {
+    return undefined;
   }
+
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+async function persistZoomPreference(tabId, payload) {
+  const [tab, screenContext] = await Promise.all([
+    chrome.tabs.get(tabId),
+    Promise.resolve(getScreenContextForTab(tabId))
+  ]);
+  const domain = getDomainFromUrl(tab.url);
+
+  if (!domain || !screenContext?.resolutionKey) {
+    console.debug("[ScreenSense] skipped zoom persistence due to missing context", {
+      tabId,
+      domain,
+      screenContext
+    });
+    return;
+  }
+
+  await saveZoomPreference({
+    domain,
+    resolutionKey: screenContext.resolutionKey,
+    normalizedScreenWidth: screenContext.normalizedScreenWidth,
+    normalizedScreenHeight: screenContext.normalizedScreenHeight,
+    zoomFactor: payload.normalizedZoomFactor,
+    zoomPercent: payload.zoomPercent
+  });
 }
 
 export function registerZoomChangeListener() {
@@ -62,10 +66,12 @@ export function registerZoomChangeListener() {
       defaultZoomFactor: zoomSettings.defaultZoomFactor
     });
 
-    void notifyTabZoomChanged(tabId, {
+    const payload = {
       normalizedZoomFactor,
       zoomPercent,
       isSupportedZoomFactor
-    });
+    };
+
+    void persistZoomPreference(tabId, payload);
   });
 }
