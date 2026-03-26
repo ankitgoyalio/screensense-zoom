@@ -72,33 +72,41 @@ export function registerZoomChangeListener() {
   listenersRegistered = true;
 
   chrome.tabs.onZoomChange.addListener((zoomChangeInfo) => {
-    const { newZoomFactor, oldZoomFactor, tabId, zoomSettings } =
-      zoomChangeInfo;
-    const normalizedZoomFactor = normalizeZoomFactor(newZoomFactor);
-    const zoomPercent = Math.round(normalizedZoomFactor * 100);
-    const isSupportedZoomFactor = SUPPORTED_ZOOM_FACTORS.includes(
-      normalizedZoomFactor
-    );
+    try {
+      const { newZoomFactor, oldZoomFactor, tabId, zoomSettings } =
+        zoomChangeInfo;
+      const normalizedZoomFactor = normalizeZoomFactor(newZoomFactor);
+      const zoomPercent = Math.round(normalizedZoomFactor * 100);
+      const isSupportedZoomFactor = SUPPORTED_ZOOM_FACTORS.includes(
+        normalizedZoomFactor
+      );
 
-    console.debug("[ScreenSense] tab zoom changed", {
-      tabId,
-      oldZoomFactor,
-      newZoomFactor,
-      normalizedZoomFactor,
-      isSupportedZoomFactor,
-      mode: zoomSettings.mode,
-      scope: zoomSettings.scope,
-      defaultZoomFactor: zoomSettings.defaultZoomFactor
-    });
+      console.debug("[ScreenSense] tab zoom changed", {
+        tabId,
+        oldZoomFactor,
+        newZoomFactor,
+        normalizedZoomFactor,
+        isSupportedZoomFactor,
+        mode: zoomSettings.mode,
+        scope: zoomSettings.scope,
+        defaultZoomFactor: zoomSettings.defaultZoomFactor
+      });
 
-    const payload = {
-      normalizedZoomFactor,
-      zoomPercent,
-      isSupportedZoomFactor
-    };
+      const payload = {
+        normalizedZoomFactor,
+        zoomPercent,
+        isSupportedZoomFactor
+      };
 
-    // MV3 may terminate the worker before this best-effort write finishes.
-    // That trade-off is acceptable here because the event is user initiated.
-    void persistZoomPreference(tabId, payload);
+      // MV3 may terminate the worker before this best-effort write finishes.
+      // That trade-off is acceptable here because the event is user initiated.
+      void persistZoomPreference(tabId, payload);
+    } catch (error) {
+      console.debug("[ScreenSense] failed to process zoom change", {
+        error,
+        tabId: zoomChangeInfo?.tabId,
+        newZoomFactor: zoomChangeInfo?.newZoomFactor
+      });
+    }
   });
 }

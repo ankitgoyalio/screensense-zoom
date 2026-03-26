@@ -35,7 +35,6 @@ async function getTabZoomState(tabId) {
     return undefined;
   }
 
-  const currentZoomPercent = Math.round(currentZoomFactor * 100);
   const savedPreference = await getSavedZoomPreference({
     domain,
     resolutionKey: screenContext.resolutionKey
@@ -43,7 +42,6 @@ async function getTabZoomState(tabId) {
 
   return {
     currentZoomFactor,
-    currentZoomPercent,
     domain,
     savedPreference,
     screenContext

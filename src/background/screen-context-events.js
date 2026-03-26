@@ -160,4 +160,13 @@ export function registerScreenContextListeners() {
   chrome.tabs.onRemoved.addListener((tabId) => {
     void removeScreenContextForTab(tabId);
   });
+
+  chrome.windows.onRemoved.addListener((windowId) => {
+    const timeout = boundsChangeTimeouts.get(windowId);
+
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+      boundsChangeTimeouts.delete(windowId);
+    }
+  });
 }

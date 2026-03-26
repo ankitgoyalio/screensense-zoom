@@ -6,7 +6,8 @@ export function getDomainFromUrl(url) {
   }
 
   try {
-    return new URL(url).hostname;
+    const hostname = new URL(url).hostname;
+    return hostname || undefined;
   } catch {
     return undefined;
   }
