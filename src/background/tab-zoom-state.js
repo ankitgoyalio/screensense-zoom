@@ -51,17 +51,20 @@ async function getTabZoomState(tabId) {
 export async function applySavedZoomForTab(tabId) {
   const tabZoomState = await getTabZoomState(tabId);
 
-  if (!tabZoomState?.savedPreference?.zoomFactor) {
+  if (!tabZoomState) {
     return;
   }
 
-  if (tabZoomState.currentZoomFactor === tabZoomState.savedPreference.zoomFactor) {
+  const targetZoomFactor =
+    tabZoomState.savedPreference?.zoomFactor ?? normalizeZoomFactor(1);
+
+  if (tabZoomState.currentZoomFactor === targetZoomFactor) {
     return;
   }
 
   await setTabZoom(
     tabId,
-    tabZoomState.savedPreference.zoomFactor,
+    targetZoomFactor,
     "[ScreenSense] failed to apply saved zoom"
   );
 }
@@ -73,15 +76,18 @@ export async function ensureZoomPreferenceForTab(tabId) {
     return;
   }
 
-  if (tabZoomState.savedPreference?.zoomFactor) {
-    if (tabZoomState.currentZoomFactor !== tabZoomState.savedPreference.zoomFactor) {
-      await setTabZoom(
-        tabId,
-        tabZoomState.savedPreference.zoomFactor,
-        "[ScreenSense] failed to set zoom"
-      );
-    }
+  const targetZoomFactor =
+    tabZoomState.savedPreference?.zoomFactor ?? normalizeZoomFactor(1);
 
+  if (tabZoomState.currentZoomFactor !== targetZoomFactor) {
+    await setTabZoom(
+      tabId,
+      targetZoomFactor,
+      "[ScreenSense] failed to set zoom"
+    );
+  }
+
+  if (tabZoomState.savedPreference?.zoomFactor) {
     return;
   }
 }

@@ -31,12 +31,22 @@ function reportScreenContext(force = false) {
 
   lastReportedResolutionKey = screenContext.resolutionKey;
 
-  chrome.runtime.sendMessage({
-    type: REPORT_SCREEN_CONTEXT_MESSAGE,
-    payload: screenContext
-  }).catch((error) => {
+  try {
+    chrome.runtime
+      .sendMessage({
+        type: REPORT_SCREEN_CONTEXT_MESSAGE,
+        payload: screenContext
+      })
+      .catch((error) => {
+        console.debug("[ScreenSense] failed to report screen context", error);
+      });
+  } catch (error) {
+    if (error?.message?.includes("Extension context invalidated")) {
+      return;
+    }
+
     console.debug("[ScreenSense] failed to report screen context", error);
-  });
+  }
 }
 
 if (!globalThis[CONTENT_LISTENER_READY_FLAG]) {
