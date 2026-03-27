@@ -1,0 +1,236 @@
+tone_instructions: >-
+    Be concise, specific, and practical. Prioritize correctness, regressions,
+    Chrome extension security, MV3 constraints, maintainability, and missing
+    tests. Avoid praise, jokes, and low-signal style nits unless they affect
+    readability or consistency.
+reviews:
+    profile: assertive
+    high_level_summary_instructions: >-
+        Produce concise release-note style bullets. Emphasize user-visible
+        extension behavior, manifest or permission changes, browser-context
+        boundaries, build or packaging impact, and follow-up risk.
+    auto_title_instructions: >-
+        Generate concise, descriptive PR titles in sentence case. Prefer the
+        form "<area>: <change>" when a clear subsystem exists, such as
+        "background", "content", "popup", "manifest", or "build".
+    labeling_instructions:
+        - label: extension
+          instructions: Apply when the PR changes Chrome extension behavior, runtime wiring, or browser-context boundaries.
+        - label: background
+          instructions: Apply when the PR changes background service worker logic, event listeners, alarms, storage coordination, or message routing.
+        - label: content-script
+          instructions: Apply when the PR changes page DOM interaction, injected scripts, page-state reading, or content-script messaging.
+        - label: ui
+          instructions: Apply when the PR changes popup, options, onboarding, or any user-facing extension UI.
+        - label: manifest
+          instructions: Apply when the PR changes manifest fields, permissions, host permissions, matches, icons, web accessible resources, or browser-specific manifest variants.
+        - label: config
+          instructions: Apply when the PR changes config files, lint rules, repo automation, environment handling, or persisted extension settings.
+        - label: docs
+          instructions: Apply when the PR primarily changes documentation, setup instructions, examples, or architectural notes.
+        - label: ci
+          instructions: Apply when the PR changes GitHub Actions workflows, required checks, build jobs, or automation.
+        - label: security
+          instructions: Apply when the PR changes trust boundaries, extension permissions, message validation, host access, script injection, or secret handling.
+        - label: performance
+          instructions: Apply when the PR materially changes event frequency, DOM observation cost, storage churn, startup work, or memory usage.
+        - label: refactor
+          instructions: Apply when behavior should remain the same and the main purpose is restructuring, cleanup, or code reuse.
+        - label: tests
+          instructions: Apply when the PR primarily adds or updates unit, integration, or extension-behavior tests.
+        - label: dependencies
+          instructions: Apply when the PR primarily updates Bun packages, tool versions, or third-party dependencies.
+        - label: breaking-change
+          instructions: Apply when the PR changes public behavior, permissions, setup steps, storage shape, or browser compatibility expectations incompatibly.
+    in_progress_fortune: false
+    poem: false
+    path_filters:
+        - "**"
+        - "!**/coverage/**"
+        - "!**/dist/**"
+        - "!**/build/**"
+        - "!**/.cache/**"
+        - "!**/*.min.*"
+        - "!**/*.snap"
+    path_instructions:
+        - path: "src/manifest/**/*.json"
+          instructions: >-
+              Focus on MV3 correctness, minimum necessary permissions, host
+              access, service worker wiring, and whether manifest entries match
+              the actual extension structure.
+        - path: "src/background/**/*.{js,mjs,cjs,ts,mts,cts}"
+          instructions: >-
+              Review background code for MV3 service worker constraints, event
+              listener lifecycle, duplicate listener registration, message
+              routing clarity, storage consistency, error handling, and whether
+              privileged browser APIs are used safely.
+        - path: "src/content/**/*.{js,mjs,cjs,ts,mts,cts}"
+          instructions: >-
+              Review DOM interaction for correctness, resilience to page
+              changes, injection safety, message validation, and avoidance of
+              privileged logic that belongs in the background context.
+        - path: "src/popup/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,css}"
+          instructions: >-
+              Focus on UI state correctness, message flow to the background,
+              accessibility basics, and whether the UI reflects extension state
+              without relying on stale assumptions.
+        - path: "src/options/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx,css}"
+          instructions: >-
+              Review settings persistence, validation, defaults, migration
+              safety, and whether options changes are reflected correctly in the
+              extension runtime.
+        - path: "**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
+          instructions: >-
+              Focus on runtime correctness, browser API usage, edge cases,
+              asynchronous error handling, and tests for behavior changes.
+              Ignore formatter-level issues.
+        - path: "**/*.{json,yml,yaml}"
+          instructions: >-
+              Focus on configuration correctness, CI safety, permissions, and
+              whether settings match the project's Bun-based workflow.
+        - path: "**/*.{md,mdx}"
+          instructions: >-
+              Review for accuracy of setup steps, architecture notes, extension
+              permissions, and documented behavior relative to the code.
+        - path: ".github/workflows/*"
+          instructions: >-
+              Review permissions, token scope, cache keys, Bun usage, required
+              checks, and whether workflows can silently skip important
+              extension validation.
+    auto_review:
+        auto_pause_after_reviewed_commits: 3
+        ignore_title_keywords:
+            - wip
+            - do not review
+            - skip review
+        labels:
+            - "!wip"
+            - "!blocked"
+            - "!do-not-merge"
+        base_branches:
+            - main
+            - master
+            - develop
+    finishing_touches:
+        custom:
+            - enabled: true
+              name: harden extension trust boundaries
+              instructions: >-
+                  Review the changed code for over-broad permissions, unchecked
+                  runtime messages, unsafe page interaction, unvalidated tab or
+                  URL assumptions, and misuse of privileged extension APIs.
+                  Apply minimal targeted fixes only where behavior is clearly
+                  improved.
+            - enabled: true
+              name: improve test coverage
+              instructions: >-
+                  Add focused tests for changed behavior, especially message
+                  handling, permission-sensitive logic, storage migrations, and
+                  event-driven regressions. If tests are not practical yet,
+                  explicitly justify the gap.
+    pre_merge_checks:
+        override_requested_reviewers_only: true
+        docstrings:
+            mode: "off"
+        title:
+            requirements: >-
+                Title should clearly describe the change, preferably in the
+                format "<area>: <change>", and should avoid WIP markers or vague
+                phrases like "updates" or "misc fixes".
+        custom_checks:
+            - mode: error
+              name: tests for behavior changes
+              instructions: >-
+                  Fail if the PR changes executable application logic,
+                  background event handling, content-script behavior, UI state,
+                  or message contracts without adding, updating, or clearly
+                  justifying the absence of automated tests.
+            - mode: error
+              name: least-privilege permissions
+              instructions: >-
+                  Fail if the diff introduces new extension permissions, host
+                  permissions, or web accessible resources without clear need
+                  and explanation.
+            - mode: error
+              name: no obvious secrets
+              instructions: >-
+                  Fail if the diff appears to introduce credentials, tokens,
+                  private keys, or copied secret material in examples, fixtures,
+                  workflow files, or extension config.
+            - mode: warning
+              name: manifest and runtime alignment
+              instructions: >-
+                  Warn when code adds background, content, popup, or options
+                  behavior without the corresponding manifest wiring, or when the
+                  manifest points to files that do not exist.
+            - mode: warning
+              name: rollout notes for risky changes
+              instructions: >-
+                  Warn when the PR changes permissions, storage shape, message
+                  contracts, or browser compatibility assumptions without noting
+                  migration, compatibility, or rollout considerations.
+    tools:
+        github-checks:
+            timeout_ms: 120000
+chat:
+    art: false
+knowledge_base:
+    code_guidelines:
+        filePatterns:
+            - "**/AGENTS.md"
+            - "**/CLAUDE.md"
+code_generation:
+    docstrings:
+        path_instructions:
+            - path: "**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
+              instructions: >-
+                  Generate comments only for exported APIs or non-obvious logic.
+                  Keep them short and behavior-focused.
+    unit_tests:
+        path_instructions:
+            - path: "src/background/**/*.{js,mjs,cjs,ts,mts,cts}"
+              instructions: >-
+                  Prefer focused tests around event handlers, message routing,
+                  permission-sensitive logic, and storage-backed state changes.
+            - path: "src/content/**/*.{js,mjs,cjs,ts,mts,cts}"
+              instructions: >-
+                  Prefer tests that validate DOM parsing, message boundaries,
+                  and behavior under missing or malformed page state.
+            - path: "src/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
+              instructions: >-
+                  Add or suggest targeted tests for behavior changes, edge
+                  cases, failure paths, and browser API interactions through
+                  clear seams or mocks.
+issue_enrichment:
+    auto_enrich:
+        enabled: true
+    planning:
+        auto_planning:
+            labels:
+                - feature
+                - enhancement
+                - bug
+                - performance
+                - security
+                - "!wip"
+                - "!blocked"
+    labeling:
+        labeling_instructions:
+            - label: bug
+              instructions: Suggest when the issue describes a defect, regression, or incorrect extension behavior.
+            - label: enhancement
+              instructions: Suggest when the issue proposes improving existing behavior without being a bug.
+            - label: feature
+              instructions: Suggest when the issue introduces new user-facing or platform capability.
+            - label: documentation
+              instructions: Suggest when the issue is primarily about docs, setup, examples, or developer guidance.
+            - label: refactor
+              instructions: Suggest when the issue is mainly about code structure, maintainability, or cleanup.
+            - label: tech-debt
+              instructions: Suggest when the issue is about deferred maintenance work or risk reduction.
+            - label: performance
+              instructions: Suggest when the issue is about event frequency, memory, storage churn, or unnecessary compute.
+            - label: security
+              instructions: Suggest when the issue concerns permissions, message validation, host access, or vulnerabilities.
+            - label: tests
+              instructions: Suggest when the issue is primarily about adding, fixing, or improving automated tests.

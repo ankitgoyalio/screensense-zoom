@@ -1,0 +1,222 @@
+/* global chrome */
+
+import {
+  REPORT_SCREEN_CONTEXT_MESSAGE,
+  REQUEST_SCREEN_CONTEXT_MESSAGE
+} from "../constants/messages.js";
+import {
+  removeScreenContextForTab,
+  setScreenContextForTab
+} from "./screen-context-cache.js";
+import { getTabAccessState } from "./tab-access.js";
+import { ensureZoomPreferenceForTab } from "./tab-zoom-state.js";
+import { flushPendingZoomPreferenceForTab } from "./zoom-events.js";
+
+let listenersRegistered = false;
+const boundsChangeTimeouts = new Map();
+const BOUNDS_CHANGE_DEBOUNCE_MS = 200;
+
+/**
+ * Injects the extension's content script into the given tab.
+ *
+ * @param {chrome.tabs.Tab} tab - Tab object; must include a numeric `id`.
+ * @throws {Error} If `tab.id` is missing.
+ * @throws {Error} If the extension is not allowed to access the tab (error message includes the denial reason).
+ */
+async function ensureContentScript(tab) {
+  if (!tab?.id) {
+    throw new Error("missing tab id for content script injection");
+  }
+
+  const accessState = await getTabAccessState(tab);
+
+  if (!accessState.canAccess) {
+    throw new Error(`injection skipped: ${accessState.reason}`);
+  }
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    files: ["content.js"]
+  });
+}
+
+/**
+ * Request the screen context from the specified tab: fetches the tab, validates access, sends a screen-context request message, and on failure attempts to inject the content script and retry.
+ * @param {number} tabId - Chrome tab id to request screen context from; no action is taken if the tab can't be loaded or is inaccessible.
+ */
+async function requestScreenContext(tabId) {
+  let tab;
+
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch (error) {
+    console.debug("[ScreenSense] unable to load tab for screen context", {
+      tabId,
+      message: error?.message
+    });
+    return;
+  }
+
+  const accessState = await getTabAccessState(tab);
+
+  if (!accessState.canAccess) {
+    console.debug("[ScreenSense] skipped screen context request for inaccessible tab", {
+      tabId,
+      url: tab.url,
+      reason: accessState.reason
+    });
+    return;
+  }
+
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      type: REQUEST_SCREEN_CONTEXT_MESSAGE
+    });
+  } catch (error) {
+    console.debug("[ScreenSense] screen context request missed tab, injecting", {
+      tabId,
+      message: error?.message
+    });
+
+    try {
+      await ensureContentScript(tab);
+      await chrome.tabs.sendMessage(tabId, {
+        type: REQUEST_SCREEN_CONTEXT_MESSAGE
+      });
+    } catch (injectionError) {
+      console.debug("[ScreenSense] unable to request screen context", {
+        tabId,
+        url: tab.url,
+        message: injectionError?.message
+      });
+    }
+  }
+}
+
+/**
+ * Requests screen context for the currently active tab in the specified window.
+ *
+ * If no active tab with an id is present, the function does nothing.
+ * @param {number} windowId - Chrome window id to query for the active tab.
+ */
+async function requestScreenContextForActiveTab(windowId) {
+  const tabs = await chrome.tabs.query({
+    active: true,
+    windowId
+  });
+  const activeTab = tabs[0];
+
+  if (!activeTab?.id) {
+    return;
+  }
+
+  await requestScreenContext(activeTab.id);
+}
+
+/**
+ * Registers Chrome event listeners to manage and refresh per-tab screen context and zoom preferences.
+ *
+ * Installs listeners once: handles incoming screen-context reports (validates payload, stores context, applies zoom),
+ * requests screen context on tab activation and after tab load completion, debounces requests when window bounds change,
+ * and cleans up cached context and pending debounce timers when tabs or windows are removed.
+ */
+export function registerScreenContextListeners() {
+  if (listenersRegistered) {
+    return;
+  }
+
+  listenersRegistered = true;
+
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    if (message?.type !== REPORT_SCREEN_CONTEXT_MESSAGE || !sender.tab?.id) {
+      return;
+    }
+
+    const normalizedScreenWidth = Math.round(
+      Number(message?.payload?.normalizedScreenWidth)
+    );
+    const normalizedScreenHeight = Math.round(
+      Number(message?.payload?.normalizedScreenHeight)
+    );
+    const sanitizedScreenWidth = Math.max(
+      normalizedScreenWidth,
+      normalizedScreenHeight
+    );
+    const sanitizedScreenHeight = Math.min(
+      normalizedScreenWidth,
+      normalizedScreenHeight
+    );
+
+    if (
+      !Number.isFinite(sanitizedScreenWidth) ||
+      !Number.isFinite(sanitizedScreenHeight) ||
+      sanitizedScreenWidth <= 0 ||
+      sanitizedScreenHeight <= 0
+    ) {
+      console.debug("[ScreenSense] invalid screen context payload", {
+        tabId: sender.tab.id,
+        payload: message?.payload
+      });
+      return;
+    }
+
+    const payload = {
+      normalizedScreenWidth: sanitizedScreenWidth,
+      normalizedScreenHeight: sanitizedScreenHeight,
+      resolutionKey: `${sanitizedScreenWidth}x${sanitizedScreenHeight}`
+    };
+    const tabId = sender.tab.id;
+    void (async () => {
+      await setScreenContextForTab(tabId, payload);
+      await flushPendingZoomPreferenceForTab(tabId);
+      await ensureZoomPreferenceForTab(tabId);
+    })().catch((error) => {
+      console.debug("[ScreenSense] failed to process screen context", {
+        tabId,
+        error
+      });
+    });
+  });
+
+  chrome.tabs.onActivated.addListener(({ tabId }) => {
+    void requestScreenContext(tabId);
+  });
+
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.status !== "complete") {
+      return;
+    }
+
+    void requestScreenContext(tabId);
+  });
+
+  chrome.windows.onBoundsChanged.addListener((window) => {
+    if (typeof window.id !== "number") {
+      return;
+    }
+
+    clearTimeout(boundsChangeTimeouts.get(window.id));
+    boundsChangeTimeouts.set(window.id, setTimeout(() => {
+      boundsChangeTimeouts.delete(window.id);
+      void requestScreenContextForActiveTab(window.id);
+    }, BOUNDS_CHANGE_DEBOUNCE_MS));
+  });
+
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    void removeScreenContextForTab(tabId).catch((error) => {
+      console.debug("[ScreenSense] failed to remove screen context for tab", {
+        tabId,
+        error
+      });
+    });
+  });
+
+  chrome.windows.onRemoved.addListener((windowId) => {
+    const timeout = boundsChangeTimeouts.get(windowId);
+
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+      boundsChangeTimeouts.delete(windowId);
+    }
+  });
+}

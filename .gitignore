@@ -1,0 +1,10 @@
+.DS_Store
+
+# NPM
+node_modules/
+
+# Dev
+dev/
+
+# Prod
+dist/
