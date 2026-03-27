@@ -74,6 +74,13 @@ async function flushPendingZoomRules() {
     return;
   }
 
+  const currentRules = await readZoomRules();
+
+  if (areRulesEqual(currentRules, pendingRules)) {
+    await clearPendingZoomRules();
+    return;
+  }
+
   await writeZoomRules(pendingRules);
   await clearPendingZoomRules();
 }
@@ -83,7 +90,11 @@ let zoomRulesWriteQueue = flushPendingZoomRules().catch((error) => {
 });
 
 function cloneRules(rules) {
-  return { ...rules };
+  return structuredClone(rules);
+}
+
+function areRulesEqual(leftRules, rightRules) {
+  return JSON.stringify(leftRules) === JSON.stringify(rightRules);
 }
 
 function queueZoomRulesWrite(operation) {
@@ -100,7 +111,9 @@ function queueZoomRulesWrite(operation) {
     await clearPendingZoomRules();
   });
 
-  zoomRulesWriteQueue = queuedOperation.catch(() => undefined);
+  zoomRulesWriteQueue = queuedOperation.catch((error) => {
+    console.error("[ScreenSense] zoom rules write failed", error);
+  });
   return queuedOperation;
 }
 

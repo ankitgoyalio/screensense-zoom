@@ -9,6 +9,7 @@ import { deleteZoomPreference, saveZoomPreference } from "./zoom-store.js";
 import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 
 let listenersRegistered = false;
+const DEFAULT_ZOOM_PERCENT = Math.round(DEFAULT_ZOOM_FACTOR * 100);
 
 async function persistZoomPreference(tabId, payload) {
   let tab;
@@ -39,7 +40,7 @@ async function persistZoomPreference(tabId, payload) {
   }
 
   try {
-    if (payload.normalizedZoomFactor === DEFAULT_ZOOM_FACTOR) {
+    if (payload.zoomPercent === DEFAULT_ZOOM_PERCENT) {
       await deleteZoomPreference({
         domain,
         resolutionKey: screenContext.resolutionKey
@@ -87,9 +88,9 @@ export function registerZoomChangeListener() {
         newZoomFactor,
         normalizedZoomFactor,
         isSupportedZoomFactor,
-        mode: zoomSettings.mode,
-        scope: zoomSettings.scope,
-        defaultZoomFactor: zoomSettings.defaultZoomFactor
+        mode: zoomSettings?.mode,
+        scope: zoomSettings?.scope,
+        defaultZoomFactor: zoomSettings?.defaultZoomFactor
       });
 
       const payload = {

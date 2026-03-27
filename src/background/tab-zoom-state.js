@@ -3,7 +3,7 @@
 import { normalizeZoomFactor } from "../constants/zoom.js";
 import { getScreenContextForTab } from "./screen-context-cache.js";
 import { getSavedZoomPreference } from "./zoom-store.js";
-import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
+import { getDomainFromUrl } from "./zoom-utils.js";
 
 async function setTabZoom(tabId, zoomFactor, logMessage) {
   try {
@@ -83,13 +83,5 @@ export async function ensureZoomPreferenceForTab(tabId) {
     }
 
     return;
-  }
-
-  if (tabZoomState.currentZoomFactor !== DEFAULT_ZOOM_FACTOR) {
-    await setTabZoom(
-      tabId,
-      DEFAULT_ZOOM_FACTOR,
-      "[ScreenSense] failed to set default zoom"
-    );
   }
 }

@@ -11,9 +11,17 @@ function getTabUrl(tab) {
 }
 
 async function hasHostPermissionForOrigin(origin) {
-  return chrome.permissions.contains({
-    origins: [`${origin}/*`]
-  });
+  try {
+    return await chrome.permissions.contains({
+      origins: [`${origin}/*`]
+    });
+  } catch (error) {
+    console.debug("[ScreenSense] failed to check host permission", {
+      origin,
+      error
+    });
+    return false;
+  }
 }
 
 export async function getTabAccessState(tab) {

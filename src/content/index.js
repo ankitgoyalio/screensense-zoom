@@ -34,8 +34,8 @@ function reportScreenContext(force = false) {
   chrome.runtime.sendMessage({
     type: REPORT_SCREEN_CONTEXT_MESSAGE,
     payload: screenContext
-  }).catch(() => {
-    // Ignore extension invalidation during reload/update.
+  }).catch((error) => {
+    console.debug("[ScreenSense] failed to report screen context", error);
   });
 }
 

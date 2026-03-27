@@ -28,6 +28,10 @@ export function normalizeZoomFactor(zoomFactor) {
     return Number.NaN;
   }
 
+  if (normalizedInput <= 0) {
+    return Number.NaN;
+  }
+
   const supportedZoomFactor = SUPPORTED_ZOOM_FACTORS.find((value) => {
     return Math.abs(value - normalizedInput) < SUPPORTED_ZOOM_FACTOR_EPSILON;
   });
