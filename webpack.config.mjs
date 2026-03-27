@@ -4,6 +4,13 @@ import CopyPlugin from "copy-webpack-plugin";
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Create shared Webpack settings used by both background and content builds.
+ * @param {boolean} isProduction - When true, set production mode and disable source maps.
+ * @param {string} outputRoot - Output directory name resolved relative to this config file.
+ * @param {boolean} clean - Whether to enable output cleaning (remove previous build files).
+ * @returns {import('webpack').Configuration} Webpack configuration object with common fields (mode, devtool, resolve, module rules, and output).
+ */
 function createSharedSettings({ isProduction, outputRoot, clean }) {
 	return {
 		mode: isProduction ? "production" : "development",

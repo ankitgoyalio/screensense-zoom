@@ -21,6 +21,11 @@ export const SUPPORTED_ZOOM_FACTORS = [
 const ZOOM_FACTOR_PRECISION = 2;
 const SUPPORTED_ZOOM_FACTOR_EPSILON = 0.001;
 
+/**
+ * Normalize a zoom multiplier to a supported value or a rounded fallback.
+ *
+ * @param {number|string} zoomFactor - A value coercible to a numeric zoom multiplier.
+ * @returns {number} `NaN` if the input is not finite or is less than or equal to zero; otherwise a supported zoom multiplier when the input is within 0.001 of one, or the input rounded to two decimal places.
 export function normalizeZoomFactor(zoomFactor) {
   const normalizedInput = Number(zoomFactor);
 

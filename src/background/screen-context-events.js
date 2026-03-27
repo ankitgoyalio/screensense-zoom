@@ -15,6 +15,13 @@ let listenersRegistered = false;
 const boundsChangeTimeouts = new Map();
 const BOUNDS_CHANGE_DEBOUNCE_MS = 200;
 
+/**
+ * Injects the extension's content script into the given tab.
+ *
+ * @param {chrome.tabs.Tab} tab - Tab object; must include a numeric `id`.
+ * @throws {Error} If `tab.id` is missing.
+ * @throws {Error} If the extension is not allowed to access the tab (error message includes the denial reason).
+ */
 async function ensureContentScript(tab) {
   if (!tab?.id) {
     throw new Error("missing tab id for content script injection");
@@ -32,6 +39,10 @@ async function ensureContentScript(tab) {
   });
 }
 
+/**
+ * Request the screen context from the specified tab: fetches the tab, validates access, sends a screen-context request message, and on failure attempts to inject the content script and retry.
+ * @param {number} tabId - Chrome tab id to request screen context from; no action is taken if the tab can't be loaded or is inaccessible.
+ */
 async function requestScreenContext(tabId) {
   let tab;
 
@@ -81,6 +92,12 @@ async function requestScreenContext(tabId) {
   }
 }
 
+/**
+ * Requests screen context for the currently active tab in the specified window.
+ *
+ * If no active tab with an id is present, the function does nothing.
+ * @param {number} windowId - Chrome window id to query for the active tab.
+ */
 async function requestScreenContextForActiveTab(windowId) {
   const tabs = await chrome.tabs.query({
     active: true,
@@ -95,6 +112,13 @@ async function requestScreenContextForActiveTab(windowId) {
   await requestScreenContext(activeTab.id);
 }
 
+/**
+ * Registers Chrome event listeners to manage and refresh per-tab screen context and zoom preferences.
+ *
+ * Installs listeners once: handles incoming screen-context reports (validates payload, stores context, applies zoom),
+ * requests screen context on tab activation and after tab load completion, debounces requests when window bounds change,
+ * and cleans up cached context and pending debounce timers when tabs or windows are removed.
+ */
 export function registerScreenContextListeners() {
   if (listenersRegistered) {
     return;

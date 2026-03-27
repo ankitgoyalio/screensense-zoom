@@ -11,6 +11,19 @@ import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 let listenersRegistered = false;
 const DEFAULT_ZOOM_PERCENT = Math.round(DEFAULT_ZOOM_FACTOR * 100);
 
+/**
+ * Persist or remove a zoom preference for the tab's domain and screen-resolution context.
+ *
+ * Attempts to look up the tab and its cached screen context; if either is unavailable or the
+ * domain or resolutionKey is missing, the function exits without writing. If `payload.zoomPercent`
+ * equals the default zoom percent the stored preference for that domain/resolution is deleted;
+ * otherwise a zoom preference is saved including normalized screen dimensions and the provided
+ * normalized zoom factor and zoom percent. Errors during lookup or persistence are caught and
+ * logged; the function does not throw.
+ *
+ * @param {number} tabId - The id of the tab where the zoom change occurred.
+ * @param {{ normalizedZoomFactor: number, zoomPercent: number }} payload - Zoom data to persist.
+ */
 async function persistZoomPreference(tabId, payload) {
   let tab;
   let screenContext;
@@ -65,6 +78,14 @@ async function persistZoomPreference(tabId, payload) {
   }
 }
 
+/**
+ * Register a single chrome.tabs.onZoomChange listener that persists user zoom changes for tabs.
+ *
+ * Subsequent calls are a no-op. For each zoom change the listener normalizes the new zoom factor,
+ * computes a rounded zoom percent, determines whether the factor is supported, and initiates a
+ * best-effort persistence of the preference (persistence is started without awaiting and may not
+ * complete before the worker is terminated).
+ */
 export function registerZoomChangeListener() {
   if (listenersRegistered) {
     return;

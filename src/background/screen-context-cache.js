@@ -2,10 +2,20 @@
 
 const screenContextByTabId = new Map();
 
+/**
+ * Builds the session-storage key for a tab's screen context.
+ * @param {number|string} tabId - The browser tab identifier.
+ * @returns {string} The session-storage key for the tab's screen context.
+ */
 function createScreenContextStorageKey(tabId) {
   return `screenContext_${tabId}`;
 }
 
+/**
+ * Check whether a Chrome tab with the given id currently exists.
+ * @param {number} tabId - The id of the Chrome tab to verify.
+ * @returns {boolean} `true` if the tab exists, `false` otherwise.
+ */
 async function doesTabExist(tabId) {
   try {
     await chrome.tabs.get(tabId);
@@ -15,6 +25,11 @@ async function doesTabExist(tabId) {
   }
 }
 
+/**
+ * Read the stored screen context for a given tab from session storage.
+ * @param {number} tabId - Chrome tab id whose screen context to read.
+ * @returns {any} The stored screen context for the tab, or `undefined` if none is stored or a read error occurred.
+ */
 async function readStoredScreenContextForTab(tabId) {
   const storageKey = createScreenContextStorageKey(tabId);
 
@@ -30,6 +45,12 @@ async function readStoredScreenContextForTab(tabId) {
   }
 }
 
+/**
+ * Persist the given screen context for a tab into Chrome session storage.
+ * @param {number} tabId - The tab identifier used to build the storage key.
+ * @param {*} screenContext - The screen context value to persist.
+ * @throws Will rethrow the underlying error if writing to chrome.storage.session fails.
+ */
 async function writeStoredScreenContextForTab(tabId, screenContext) {
   const storageKey = createScreenContextStorageKey(tabId);
 
@@ -46,6 +67,11 @@ async function writeStoredScreenContextForTab(tabId, screenContext) {
   }
 }
 
+/**
+ * Retrieve the screen context for a tab, resolving to the cached or persisted context when present; if a stored context exists but the tab no longer exists it is removed and `undefined` is returned.
+ * @param {number} tabId - Chrome tab identifier.
+ * @returns {object|undefined} The screen context for the tab, or `undefined` if no context exists or the tab is not present.
+ */
 export async function getScreenContextForTab(tabId) {
   if (screenContextByTabId.has(tabId)) {
     return screenContextByTabId.get(tabId);
@@ -66,6 +92,13 @@ export async function getScreenContextForTab(tabId) {
   return screenContext;
 }
 
+/**
+ * Set the screen context for a tab and persist it to session storage.
+ *
+ * @param {number} tabId - Chrome tab identifier.
+ * @param {*} screenContext - Screen context value to cache and store.
+ * @throws {Error} If writing to session storage fails; the in-memory cache is restored to its previous state before the error is rethrown.
+ */
 export async function setScreenContextForTab(tabId, screenContext) {
   const previousScreenContext = screenContextByTabId.get(tabId);
   screenContextByTabId.set(tabId, screenContext);
@@ -83,6 +116,11 @@ export async function setScreenContextForTab(tabId, screenContext) {
   }
 }
 
+/**
+ * Remove stored screen context for a tab and clear its in-memory cache.
+ * @param {number} tabId - Chrome tab id whose screen context should be removed.
+ * @throws {Error} If removing the session storage entry fails; the previous cache is restored before the error is rethrown.
+ */
 export async function removeScreenContextForTab(tabId) {
   const cachedScreenContext = screenContextByTabId.get(tabId);
   screenContextByTabId.delete(tabId);
