@@ -69,9 +69,10 @@ async function writeStoredScreenContextForTab(tabId, screenContext) {
 }
 
 /**
- * Retrieve the screen context for a tab, resolving to the cached or persisted context when present; if a stored context exists but the tab no longer exists it is removed and `undefined` is returned.
+ * Enqueue a mutation for a tab so storage/cache changes run sequentially.
  * @param {number} tabId - Chrome tab identifier.
- * @returns {object|undefined} The screen context for the tab, or `undefined` if no context exists or the tab is not present.
+ * @param {() => Promise<void>} mutation - Async mutation to run for the tab.
+ * @returns {Promise<void>} A promise that settles when the queued mutation finishes.
  */
 function enqueueTabMutation(tabId, mutation) {
   const previousMutation = pendingMutationsByTabId.get(tabId) ?? Promise.resolve();
@@ -87,6 +88,12 @@ function enqueueTabMutation(tabId, mutation) {
   pendingMutationsByTabId.set(tabId, nextMutation);
   return nextMutation;
 }
+
+/**
+ * Retrieve the screen context for a tab, resolving to the cached or persisted context when present; if a stored context exists but the tab no longer exists it is removed and `undefined` is returned.
+ * @param {number} tabId - Chrome tab identifier.
+ * @returns {object|undefined} The screen context for the tab, or `undefined` if no context exists or the tab is not present.
+ */
 export async function getScreenContextForTab(tabId) {
   if (screenContextByTabId.has(tabId)) {
     return screenContextByTabId.get(tabId);

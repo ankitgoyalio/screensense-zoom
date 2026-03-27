@@ -98,7 +98,6 @@ async function persistZoomPreference(tabId, payload, { queueIfContextMissing } =
       return;
     }
 
-    pendingZoomPayloadByTabId.delete(tabId);
     await saveZoomPreference({
       domain,
       resolutionKey: screenContext.resolutionKey,
@@ -107,6 +106,7 @@ async function persistZoomPreference(tabId, payload, { queueIfContextMissing } =
       zoomFactor: payload.normalizedZoomFactor,
       zoomPercent: payload.zoomPercent
     });
+    pendingZoomPayloadByTabId.delete(tabId);
   } catch (error) {
     console.debug("[ScreenSense] failed to persist zoom preference", {
       tabId,
@@ -117,12 +117,9 @@ async function persistZoomPreference(tabId, payload, { queueIfContextMissing } =
 }
 
 /**
- * Register a single chrome.tabs.onZoomChange listener that persists user zoom changes for tabs.
- *
- * Subsequent calls are a no-op. For each zoom change the listener normalizes the new zoom factor,
- * computes a rounded zoom percent, determines whether the factor is supported, and initiates a
- * best-effort persistence of the preference (persistence is started without awaiting and may not
- * complete before the worker is terminated).
+ * Flush a queued zoom payload for a tab once screen context becomes available.
+ * @param {number} tabId - The tab whose pending zoom payload should be persisted.
+ * @returns {Promise<void>} Resolves after the queued payload has been retried.
  */
 export async function flushPendingZoomPreferenceForTab(tabId) {
   const pendingPayload = pendingZoomPayloadByTabId.get(tabId);
@@ -135,6 +132,15 @@ export async function flushPendingZoomPreferenceForTab(tabId) {
     queueIfContextMissing: false
   });
 }
+
+/**
+ * Register a single chrome.tabs.onZoomChange listener that persists user zoom changes for tabs.
+ *
+ * Subsequent calls are a no-op. For each zoom change the listener normalizes the new zoom factor,
+ * computes a rounded zoom percent, determines whether the factor is supported, and initiates a
+ * best-effort persistence of the preference (persistence is started without awaiting and may not
+ * complete before the worker is terminated).
+ */
 export function registerZoomChangeListener() {
   if (listenersRegistered) {
     return;

@@ -3,6 +3,23 @@ import { fileURLToPath } from "node:url";
 import CopyPlugin from "copy-webpack-plugin";
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const SUPPORTED_BROWSERS = new Set(["chrome"]);
+
+function resolveBrowserTarget(env) {
+	const requestedBrowser =
+		typeof env?.BROWSER === "string" ? env.BROWSER.trim() : "";
+	const browser = requestedBrowser || "chrome";
+
+	if (!SUPPORTED_BROWSERS.has(browser)) {
+		throw new Error(
+			`Unsupported BROWSER="${browser}". Supported values: ${[
+				...SUPPORTED_BROWSERS,
+			].join(", ")}`
+		);
+	}
+
+	return browser;
+}
 
 /**
  * Create shared Webpack settings used by both background and content builds.
@@ -38,7 +55,7 @@ function createSharedSettings({ isProduction, outputRoot, clean }) {
 }
 
 export default (env = {}, argv = {}) => {
-	const browser = env.BROWSER ?? "chrome";
+	const browser = resolveBrowserTarget(env);
 	const isProduction = argv.mode === "production";
 	const outputRoot = isProduction ? "dist" : "dev";
 	const sharedSettings = createSharedSettings({
