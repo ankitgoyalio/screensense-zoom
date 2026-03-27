@@ -10,6 +10,7 @@ import { DEFAULT_ZOOM_FACTOR, getDomainFromUrl } from "./zoom-utils.js";
 
 let listenersRegistered = false;
 const DEFAULT_ZOOM_PERCENT = Math.round(DEFAULT_ZOOM_FACTOR * 100);
+const pendingZoomPayloadByTabId = new Map();
 
 /**
  * Persist or remove a zoom preference for the tab's domain and screen-resolution context.
@@ -24,7 +25,26 @@ const DEFAULT_ZOOM_PERCENT = Math.round(DEFAULT_ZOOM_FACTOR * 100);
  * @param {number} tabId - The id of the tab where the zoom change occurred.
  * @param {{ normalizedZoomFactor: number, zoomPercent: number }} payload - Zoom data to persist.
  */
-async function persistZoomPreference(tabId, payload) {
+function createZoomPayload(tabId, newZoomFactor) {
+  const normalizedZoomFactor = normalizeZoomFactor(newZoomFactor);
+
+  if (!Number.isFinite(normalizedZoomFactor) || normalizedZoomFactor <= 0) {
+    console.debug("[ScreenSense] ignored invalid zoom change", {
+      tabId,
+      newZoomFactor,
+      normalizedZoomFactor
+    });
+    return undefined;
+  }
+
+  return {
+    normalizedZoomFactor,
+    zoomPercent: Math.round(normalizedZoomFactor * 100),
+    isSupportedZoomFactor: SUPPORTED_ZOOM_FACTORS.includes(normalizedZoomFactor)
+  };
+}
+
+async function persistZoomPreference(tabId, payload, { queueIfContextMissing } = {}) {
   let tab;
   let screenContext;
 
@@ -43,12 +63,29 @@ async function persistZoomPreference(tabId, payload) {
 
   const domain = getDomainFromUrl(tab.url);
 
-  if (!domain || !screenContext?.resolutionKey) {
+  if (!domain) {
     console.debug("[ScreenSense] skipped zoom persistence due to missing context", {
       tabId,
       domain,
       screenContext
     });
+    return;
+  }
+
+  if (!screenContext?.resolutionKey) {
+    if (queueIfContextMissing) {
+      pendingZoomPayloadByTabId.set(tabId, payload);
+      console.debug("[ScreenSense] queued zoom persistence until screen context is available", {
+        tabId,
+        domain
+      });
+    } else {
+      console.debug("[ScreenSense] skipped queued zoom persistence due to missing context", {
+        tabId,
+        domain
+      });
+    }
+
     return;
   }
 
@@ -61,6 +98,7 @@ async function persistZoomPreference(tabId, payload) {
       return;
     }
 
+    pendingZoomPayloadByTabId.delete(tabId);
     await saveZoomPreference({
       domain,
       resolutionKey: screenContext.resolutionKey,
@@ -86,6 +124,17 @@ async function persistZoomPreference(tabId, payload) {
  * best-effort persistence of the preference (persistence is started without awaiting and may not
  * complete before the worker is terminated).
  */
+export async function flushPendingZoomPreferenceForTab(tabId) {
+  const pendingPayload = pendingZoomPayloadByTabId.get(tabId);
+
+  if (!pendingPayload) {
+    return;
+  }
+
+  await persistZoomPreference(tabId, pendingPayload, {
+    queueIfContextMissing: false
+  });
+}
 export function registerZoomChangeListener() {
   if (listenersRegistered) {
     return;
@@ -97,32 +146,28 @@ export function registerZoomChangeListener() {
     try {
       const { newZoomFactor, oldZoomFactor, tabId, zoomSettings } =
         zoomChangeInfo;
-      const normalizedZoomFactor = normalizeZoomFactor(newZoomFactor);
-      const zoomPercent = Math.round(normalizedZoomFactor * 100);
-      const isSupportedZoomFactor = SUPPORTED_ZOOM_FACTORS.includes(
-        normalizedZoomFactor
-      );
+      const payload = createZoomPayload(tabId, newZoomFactor);
+
+      if (!payload) {
+        return;
+      }
 
       console.debug("[ScreenSense] tab zoom changed", {
         tabId,
         oldZoomFactor,
         newZoomFactor,
-        normalizedZoomFactor,
-        isSupportedZoomFactor,
+        normalizedZoomFactor: payload.normalizedZoomFactor,
+        isSupportedZoomFactor: payload.isSupportedZoomFactor,
         mode: zoomSettings?.mode,
         scope: zoomSettings?.scope,
         defaultZoomFactor: zoomSettings?.defaultZoomFactor
       });
 
-      const payload = {
-        normalizedZoomFactor,
-        zoomPercent,
-        isSupportedZoomFactor
-      };
-
       // MV3 may terminate the worker before this best-effort write finishes.
       // That trade-off is acceptable here because the event is user initiated.
-      void persistZoomPreference(tabId, payload);
+      void persistZoomPreference(tabId, payload, {
+        queueIfContextMissing: true
+      });
     } catch (error) {
       console.debug("[ScreenSense] failed to process zoom change", {
         error,

@@ -10,6 +10,7 @@ import {
 } from "./screen-context-cache.js";
 import { getTabAccessState } from "./tab-access.js";
 import { ensureZoomPreferenceForTab } from "./tab-zoom-state.js";
+import { flushPendingZoomPreferenceForTab } from "./zoom-events.js";
 
 let listenersRegistered = false;
 const boundsChangeTimeouts = new Map();
@@ -131,23 +132,43 @@ export function registerScreenContextListeners() {
       return;
     }
 
-    const { payload } = message;
+    const normalizedScreenWidth = Math.round(
+      Number(message?.payload?.normalizedScreenWidth)
+    );
+    const normalizedScreenHeight = Math.round(
+      Number(message?.payload?.normalizedScreenHeight)
+    );
+    const sanitizedScreenWidth = Math.max(
+      normalizedScreenWidth,
+      normalizedScreenHeight
+    );
+    const sanitizedScreenHeight = Math.min(
+      normalizedScreenWidth,
+      normalizedScreenHeight
+    );
 
     if (
-      typeof payload?.normalizedScreenWidth !== "number" ||
-      typeof payload?.normalizedScreenHeight !== "number" ||
-      typeof payload?.resolutionKey !== "string"
+      !Number.isFinite(sanitizedScreenWidth) ||
+      !Number.isFinite(sanitizedScreenHeight) ||
+      sanitizedScreenWidth <= 0 ||
+      sanitizedScreenHeight <= 0
     ) {
       console.debug("[ScreenSense] invalid screen context payload", {
         tabId: sender.tab.id,
-        payload
+        payload: message?.payload
       });
       return;
     }
 
+    const payload = {
+      normalizedScreenWidth: sanitizedScreenWidth,
+      normalizedScreenHeight: sanitizedScreenHeight,
+      resolutionKey: `${sanitizedScreenWidth}x${sanitizedScreenHeight}`
+    };
     const tabId = sender.tab.id;
     void (async () => {
       await setScreenContextForTab(tabId, payload);
+      await flushPendingZoomPreferenceForTab(tabId);
       await ensureZoomPreferenceForTab(tabId);
     })().catch((error) => {
       console.debug("[ScreenSense] failed to process screen context", {

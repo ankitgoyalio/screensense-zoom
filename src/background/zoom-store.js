@@ -20,10 +20,27 @@ function createPreferenceKey({ domain, resolutionKey }) {
  * @returns {*} The stored value for the key, or `undefined` if not present.
  * @throws {Error} If reading from chrome.storage.local fails.
  */
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 async function readRulesFromStorage(storageKey) {
   try {
     const stored = await chrome.storage.local.get(storageKey);
-    return stored[storageKey];
+    const rules = stored[storageKey];
+
+    if (rules === undefined) {
+      return storageKey === ZOOM_RULES_STORAGE_KEY ? {} : undefined;
+    }
+
+    if (isPlainObject(rules)) {
+      return rules;
+    }
+
+    console.warn("[ScreenSense] ignored invalid zoom rules storage payload", {
+      storageKey,
+      valueType: Array.isArray(rules) ? "array" : typeof rules
+    });
+    return storageKey === ZOOM_RULES_STORAGE_KEY ? {} : undefined;
   } catch (error) {
     console.error("[ScreenSense] failed to read zoom rules storage", {
       storageKey,
@@ -38,11 +55,7 @@ async function readRulesFromStorage(storageKey) {
  * @returns {Object} The committed zoom rules object, or `{}` if no rules are stored or a storage read fails.
  */
 async function readZoomRules() {
-  try {
-    return (await readRulesFromStorage(ZOOM_RULES_STORAGE_KEY)) ?? {};
-  } catch {
-    return {};
-  }
+  return await readRulesFromStorage(ZOOM_RULES_STORAGE_KEY);
 }
 
 /**
@@ -79,8 +92,20 @@ async function writeZoomRules(rules) {
  * @returns {Object|undefined} The pending zoom rules object stored under the pending key, or `undefined` if no pending rules exist or a storage read error occurred.
  */
 async function readPendingZoomRules() {
+  return await readRulesFromStorage(PENDING_ZOOM_RULES_STORAGE_KEY);
+}
+
+async function readZoomRulesSilent() {
   try {
-    return await readRulesFromStorage(PENDING_ZOOM_RULES_STORAGE_KEY);
+    return await readZoomRules();
+  } catch {
+    return {};
+  }
+}
+
+async function readPendingZoomRulesSilent() {
+  try {
+    return await readPendingZoomRules();
   } catch {
     return undefined;
   }
@@ -191,7 +216,8 @@ function queueZoomRulesWrite(operation) {
  */
 export async function getSavedZoomPreference({ domain, resolutionKey }) {
   await zoomRulesWriteQueue;
-  const rules = (await readPendingZoomRules()) ?? (await readZoomRules());
+  const rules =
+    (await readPendingZoomRulesSilent()) ?? (await readZoomRulesSilent());
   return rules[createPreferenceKey({ domain, resolutionKey })];
 }
 

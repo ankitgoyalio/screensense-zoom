@@ -1,6 +1,7 @@
 /* global chrome */
 
 const screenContextByTabId = new Map();
+const pendingMutationsByTabId = new Map();
 
 /**
  * Builds the session-storage key for a tab's screen context.
@@ -72,6 +73,20 @@ async function writeStoredScreenContextForTab(tabId, screenContext) {
  * @param {number} tabId - Chrome tab identifier.
  * @returns {object|undefined} The screen context for the tab, or `undefined` if no context exists or the tab is not present.
  */
+function enqueueTabMutation(tabId, mutation) {
+  const previousMutation = pendingMutationsByTabId.get(tabId) ?? Promise.resolve();
+  const nextMutation = previousMutation
+    .catch(() => {})
+    .then(mutation)
+    .finally(() => {
+      if (pendingMutationsByTabId.get(tabId) === nextMutation) {
+        pendingMutationsByTabId.delete(tabId);
+      }
+    });
+
+  pendingMutationsByTabId.set(tabId, nextMutation);
+  return nextMutation;
+}
 export async function getScreenContextForTab(tabId) {
   if (screenContextByTabId.has(tabId)) {
     return screenContextByTabId.get(tabId);
@@ -99,21 +114,23 @@ export async function getScreenContextForTab(tabId) {
  * @param {*} screenContext - Screen context value to cache and store.
  * @throws {Error} If writing to session storage fails; the in-memory cache is restored to its previous state before the error is rethrown.
  */
-export async function setScreenContextForTab(tabId, screenContext) {
-  const previousScreenContext = screenContextByTabId.get(tabId);
-  screenContextByTabId.set(tabId, screenContext);
+export function setScreenContextForTab(tabId, screenContext) {
+  return enqueueTabMutation(tabId, async () => {
+    const previousScreenContext = screenContextByTabId.get(tabId);
+    screenContextByTabId.set(tabId, screenContext);
 
-  try {
-    await writeStoredScreenContextForTab(tabId, screenContext);
-  } catch (error) {
-    if (previousScreenContext !== undefined) {
-      screenContextByTabId.set(tabId, previousScreenContext);
-    } else {
-      screenContextByTabId.delete(tabId);
+    try {
+      await writeStoredScreenContextForTab(tabId, screenContext);
+    } catch (error) {
+      if (previousScreenContext !== undefined) {
+        screenContextByTabId.set(tabId, previousScreenContext);
+      } else {
+        screenContextByTabId.delete(tabId);
+      }
+
+      throw error;
     }
-
-    throw error;
-  }
+  });
 }
 
 /**
@@ -121,21 +138,23 @@ export async function setScreenContextForTab(tabId, screenContext) {
  * @param {number} tabId - Chrome tab id whose screen context should be removed.
  * @throws {Error} If removing the session storage entry fails; the previous cache is restored before the error is rethrown.
  */
-export async function removeScreenContextForTab(tabId) {
-  const cachedScreenContext = screenContextByTabId.get(tabId);
-  screenContextByTabId.delete(tabId);
+export function removeScreenContextForTab(tabId) {
+  return enqueueTabMutation(tabId, async () => {
+    const cachedScreenContext = screenContextByTabId.get(tabId);
+    screenContextByTabId.delete(tabId);
 
-  try {
-    await chrome.storage.session.remove(createScreenContextStorageKey(tabId));
-  } catch (error) {
-    if (cachedScreenContext) {
-      screenContextByTabId.set(tabId, cachedScreenContext);
+    try {
+      await chrome.storage.session.remove(createScreenContextStorageKey(tabId));
+    } catch (error) {
+      if (cachedScreenContext) {
+        screenContextByTabId.set(tabId, cachedScreenContext);
+      }
+
+      console.error("[ScreenSense] failed to remove screen context", {
+        tabId,
+        error
+      });
+      throw error;
     }
-
-    console.error("[ScreenSense] failed to remove screen context", {
-      tabId,
-      error
-    });
-    throw error;
-  }
+  });
 }

@@ -27,7 +27,11 @@ function createSharedSettings({ isProduction, outputRoot, clean }) {
 			],
 		},
 		output: {
-			clean,
+			clean: clean
+				? {
+						keep: /^(background\.js|content\.js|manifest\.json|icons\/)/,
+					}
+				: false,
 			path: path.resolve(ROOT_DIR, outputRoot),
 		},
 	};
