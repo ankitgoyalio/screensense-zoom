@@ -46,13 +46,14 @@ function reportScreenContext(force = false) {
     return;
   }
 
-  lastReportedResolutionKey = screenContext.resolutionKey;
-
   try {
     chrome.runtime
       .sendMessage({
         type: REPORT_SCREEN_CONTEXT_MESSAGE,
         payload: screenContext
+      })
+      .then(() => {
+        lastReportedResolutionKey = screenContext.resolutionKey;
       })
       .catch((error) => {
         console.debug("[ScreenSense] failed to report screen context", error);

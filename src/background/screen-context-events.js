@@ -203,7 +203,12 @@ export function registerScreenContextListeners() {
   });
 
   chrome.tabs.onRemoved.addListener((tabId) => {
-    void removeScreenContextForTab(tabId);
+    void removeScreenContextForTab(tabId).catch((error) => {
+      console.debug("[ScreenSense] failed to remove screen context for tab", {
+        tabId,
+        error
+      });
+    });
   });
 
   chrome.windows.onRemoved.addListener((windowId) => {

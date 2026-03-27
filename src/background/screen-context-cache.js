@@ -99,7 +99,12 @@ export async function getScreenContextForTab(tabId) {
   }
 
   if (!(await doesTabExist(tabId))) {
-    await removeScreenContextForTab(tabId);
+    void removeScreenContextForTab(tabId).catch((error) => {
+      console.debug("[ScreenSense] cleanup failed for stale tab context", {
+        tabId,
+        error
+      });
+    });
     return undefined;
   }
 
