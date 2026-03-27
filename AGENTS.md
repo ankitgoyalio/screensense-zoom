@@ -27,6 +27,12 @@ Use these sources as the default reference order whenever they are relevant:
 - Never edit `package.json` directly.
 - If a `package.json` change is needed, tell the user exactly what to edit and let the user make that change themselves.
 
+## Testing workflow
+
+- Follow Green-Red TDD for all code changes from now on.
+- Start by adding or updating an automated test that captures the intended behavior.
+- Confirm the test fails before implementing the fix, then make it pass and keep the suite green.
+
 ## Skills
 
 - Whenever appropriate, invoke the `web-design-guidelines` skill for UI/UX review and standards checks.
