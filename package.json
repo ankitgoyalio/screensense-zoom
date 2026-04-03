@@ -1,0 +1,17 @@
+{
+	"name": "screensense-zoom",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"test": "bun test",
+		"test:watch": "bun test --watch",
+		"build": "bun run scripts/build.ts",
+		"typecheck": "bunx tsc --noEmit -p tsconfig.json",
+		"dev": "bunx tsc --watch -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"chrome-types": "^0.1.425",
+		"typescript": "^6.0.2"
+	}
+}
