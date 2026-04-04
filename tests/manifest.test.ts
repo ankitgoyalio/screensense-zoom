@@ -10,7 +10,9 @@ type ExtensionManifest = {
     service_worker?: string;
     type?: string;
   };
+  host_permissions?: string[];
   icons?: Record<string, string>;
+  permissions?: string[];
 };
 
 const requiredDistFiles = [
@@ -37,6 +39,8 @@ describe("extension baseline", () => {
     expect(manifest.action?.default_popup).toBe("popup/popup.html");
     expect(manifest.background?.service_worker).toBe("background/service-worker.js");
     expect(manifest.background?.type).toBe("module");
+    expect(manifest.host_permissions).toEqual(["<all_urls>"]);
+    expect(manifest.permissions).toEqual(["scripting", "storage", "windows"]);
     expect(manifest.icons).toEqual({
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

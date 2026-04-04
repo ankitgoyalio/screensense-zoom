@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", sans-serif;
   background: #f5f7fb;
   color: #18212f;
 }
@@ -17,4 +17,19 @@ h1 {
 
 #app {
   font-size: 14px;
+}
+
+.empty-state {
+  margin: 0;
+  line-height: 1.5;
+  color: #4f5d73;
+}
+
+.resolution-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.resolution-item {
+  line-height: 1.6;
 }
