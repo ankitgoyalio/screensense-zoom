@@ -12,7 +12,9 @@
 3. Use `bun install` instead of `npm install`, `yarn install`, or `pnpm install`.
 4. Use `bun run <script>` instead of `npm run <script>`, `yarn run <script>`, or `pnpm run <script>`.
 5. Use `bun test` for tests when the project is using Bun's test runner. If the repo is already using another test runner, keep the existing setup unless explicitly migrating it.
+6. Never make direct changes to `package.json`. If a `package.json` change is needed, provide the exact command the user should run to make that change instead of editing the file.
 
 ## Design workflow
 
 1. When making changes to page aesthetics, visual styling, layout polish, or UI presentation, always use the [frontend-design](/.agents/skills/frontend-design/) skill.
+2. Unless the user explicitly asks for a different visual direction, prefer a minimal, Apple-inspired aesthetic with clean spacing, restrained color, subtle hierarchy, polished motion, and low visual noise.

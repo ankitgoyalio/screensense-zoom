@@ -1,5 +1,6 @@
 import { recordResolution, RESOLUTION_STORAGE_KEY } from "../shared/resolution-history.js";
 import { createNormalizedScreenContext } from "../shared/screen-context.js";
+import { createWindowBoundsDebouncer } from "../shared/window-bounds-debounce.js";
 
 type WindowScreenDimensions = {
   availHeight: number;
@@ -72,10 +73,16 @@ async function persistResolutionForWindow(windowId: number): Promise<void> {
   });
 }
 
+const windowBoundsDebouncer = createWindowBoundsDebouncer({
+  run(windowId) {
+    void persistResolutionForWindow(windowId);
+  }
+});
+
 chrome.windows.onBoundsChanged.addListener((chromeWindow) => {
   if (typeof chromeWindow.id !== "number") {
     return;
   }
 
-  void persistResolutionForWindow(chromeWindow.id);
+  windowBoundsDebouncer.schedule(chromeWindow.id);
 });

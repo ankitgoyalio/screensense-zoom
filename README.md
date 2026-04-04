@@ -27,10 +27,9 @@ This creates a loadable extension in `dist/`.
 1. Open `chrome://extensions`.
 2. Enable Developer Mode.
 3. Click Load unpacked.
-4. Select `/Users/ankit-17178/Developer/ankit/screensense-zoom/dist`.
+4. Select [dist](/dist/).
 
 ## Reload workflow
 
 - Reload the extension after changes to `manifest.json` or the background service worker.
 - Reopen the popup after changes to popup HTML, CSS, or JS.
-- Refresh the target page after content script changes once content scripts are added.

@@ -7,7 +7,7 @@ import {
 } from "../src/shared/resolution-history";
 
 describe("resolution history", () => {
-  test("formats availWidth and availHeight as a resolution label", () => {
+  test("formats width and height as a resolution label", () => {
     expect(formatResolution({ width: 1920, height: 1080 })).toBe("1920 x 1080");
   });
 
