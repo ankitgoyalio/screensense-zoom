@@ -1,35 +1,231 @@
+:root {
+  --paper: #f2eadf;
+  --paper-deep: #e6d8c3;
+  --ink: #1c1712;
+  --muted: #6c6054;
+  --accent: #a9441f;
+  --accent-soft: rgba(169, 68, 31, 0.12);
+  --line: rgba(28, 23, 18, 0.14);
+  --shadow: 0 18px 50px rgba(52, 33, 15, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: #f5f7fb;
-  color: #18212f;
+  min-width: 320px;
+  font-family: "Manrope", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 38%),
+    linear-gradient(145deg, #f6efe6 0%, #eadbc6 48%, #d9c1a5 100%);
+  color: var(--ink);
 }
 
 .popup {
-  min-width: 280px;
-  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.popup::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+.chrome-frame {
+  position: absolute;
+  top: -36px;
+  right: -28px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 40% 40%, rgba(255, 247, 239, 0.92), rgba(255, 247, 239, 0) 58%),
+    linear-gradient(180deg, rgba(169, 68, 31, 0.2), rgba(169, 68, 31, 0));
+  filter: blur(1px);
+  opacity: 0.95;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 18px;
+  padding: 2px 2px 0;
+  animation: rise-in 420ms ease-out;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 h1 {
-  margin: 0 0 12px;
-  font-size: 18px;
+  margin: 0;
+  max-width: 220px;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 34px;
+  line-height: 0.92;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.intro {
+  margin: 12px 0 0;
+  max-width: 250px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.panel {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 250, 244, 0.8), rgba(244, 233, 219, 0.94)),
+    var(--paper);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+  animation: rise-in 520ms ease-out;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.panel-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  padding: 4px 8px;
+  border: 1px solid rgba(169, 68, 31, 0.22);
+  background: var(--accent-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 #app {
+  padding: 8px 16px 16px;
   font-size: 14px;
 }
 
 .empty-state {
+  padding: 14px 0 6px;
+}
+
+.empty-kicker {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.empty-copy {
   margin: 0;
-  line-height: 1.5;
-  color: #4f5d73;
+  line-height: 1.6;
+  color: var(--muted);
 }
 
 .resolution-list {
   margin: 0;
-  padding-left: 20px;
+  padding: 0;
+  list-style: none;
 }
 
 .resolution-item {
-  line-height: 1.6;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  animation: slide-in 320ms ease-out both;
+}
+
+.resolution-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 4px;
+}
+
+.resolution-index {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.resolution-value {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.resolution-item:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.resolution-item:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.resolution-item:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.resolution-item:nth-child(5) {
+  animation-delay: 160ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }

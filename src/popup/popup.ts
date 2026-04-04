@@ -11,15 +11,21 @@ function renderResolutionList(history: string[]): void {
 
   if (history.length === 0) {
     app.innerHTML = `
-      <p class="empty-state">
-        Resize or move a Chrome window to capture a resolution.
-      </p>
+      <div class="empty-state">
+        <p class="empty-kicker">Awaiting signal</p>
+        <p class="empty-copy">Resize or move a Chrome window to capture a resolution.</p>
+      </div>
     `;
     return;
   }
 
   const listItems = history
-    .map((resolution) => `<li class="resolution-item">${resolution}</li>`)
+    .map((resolution, index) => `
+      <li class="resolution-item">
+        <span class="resolution-index">${String(index + 1).padStart(2, "0")}</span>
+        <span class="resolution-value">${resolution}</span>
+      </li>
+    `)
     .join("");
 
   app.innerHTML = `
