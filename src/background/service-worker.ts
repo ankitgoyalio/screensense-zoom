@@ -12,6 +12,23 @@ type WindowScreenDimensions = {
   availWidth: number;
 };
 
+const WINDOW_ID_NONE = -1;
+
+export function getValidWindowId(windowId: number | undefined): number | null {
+  if (typeof windowId !== "number" || windowId === WINDOW_ID_NONE) {
+    return null;
+  }
+
+  return windowId;
+}
+
+export function shouldCaptureForTabUpdate(
+  changeInfo: { status?: string },
+  tab: Pick<chrome.tabs.Tab, "windowId">
+): boolean {
+  return changeInfo.status === "complete" && getValidWindowId(tab.windowId) !== null;
+}
+
 async function getActiveTabId(windowId: number): Promise<number | null> {
   const tabs = await chrome.tabs.query({
     active: true,
@@ -86,10 +103,34 @@ const windowBoundsDebouncer = createWindowBoundsDebouncer({
   }
 });
 
-chrome.windows.onBoundsChanged.addListener((chromeWindow) => {
-  if (typeof chromeWindow.id !== "number") {
+function scheduleResolutionCapture(windowId: number | undefined): void {
+  const validWindowId = getValidWindowId(windowId);
+
+  if (validWindowId === null) {
     return;
   }
 
-  windowBoundsDebouncer.schedule(chromeWindow.id);
-});
+  windowBoundsDebouncer.schedule(validWindowId);
+}
+
+if (typeof chrome !== "undefined") {
+  chrome.windows.onBoundsChanged.addListener((chromeWindow) => {
+    scheduleResolutionCapture(chromeWindow.id);
+  });
+
+  chrome.tabs.onActivated.addListener((activeInfo) => {
+    scheduleResolutionCapture(activeInfo.windowId);
+  });
+
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (!shouldCaptureForTabUpdate(changeInfo, tab)) {
+      return;
+    }
+
+    scheduleResolutionCapture(tab.windowId);
+  });
+
+  chrome.windows.onFocusChanged.addListener((windowId) => {
+    scheduleResolutionCapture(windowId);
+  });
+}
