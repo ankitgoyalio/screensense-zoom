@@ -68,6 +68,19 @@ async function getScreenDimensionsFromTab(tabId: number): Promise<WindowScreenDi
   }
 }
 
+async function getZoomStateForTab(tabId: number): Promise<{
+  currentZoomFactor: number;
+  defaultZoomFactor: number;
+}> {
+  const currentZoomFactor = normalizeZoomFactor(await chrome.tabs.getZoom(tabId));
+  const zoomSettings = await chrome.tabs.getZoomSettings(tabId);
+
+  return {
+    currentZoomFactor,
+    defaultZoomFactor: normalizeZoomFactor(zoomSettings.defaultZoomFactor ?? 1)
+  };
+}
+
 async function persistResolutionForWindow(windowId: number): Promise<void> {
   const tabId = await getActiveTabId(windowId);
 
@@ -85,14 +98,14 @@ async function persistResolutionForWindow(windowId: number): Promise<void> {
     height: screenDimensions.availHeight,
     width: screenDimensions.availWidth
   });
-  const zoomFactor = normalizeZoomFactor(await chrome.tabs.getZoom(tabId));
+  const zoomState = await getZoomStateForTab(tabId);
   const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
   const history = normalizeResolutionHistory(storedState[RESOLUTION_STORAGE_KEY]);
 
   await chrome.storage.local.set({
     [RESOLUTION_STORAGE_KEY]: recordResolution(history, {
       ...normalizedScreenContext,
-      zoomFactor
+      ...zoomState
     })
   });
 }

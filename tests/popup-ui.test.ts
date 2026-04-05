@@ -13,13 +13,13 @@ describe("popup ui", () => {
 
   test("creates a simple list state from captured resolutions", () => {
     expect(getResolutionState([
-      { resolution: "2560 x 1440", zoomFactor: 1.25 },
-      { resolution: "1920 x 1080", zoomFactor: 1 }
+      { currentZoomFactor: 1.25, defaultZoomFactor: 1, resolution: "2560 x 1440" },
+      { currentZoomFactor: 1, defaultZoomFactor: 1, resolution: "1920 x 1080" }
     ])).toEqual({
       helperText: "Most recent first.",
       history: [
-        { resolution: "2560 x 1440", zoomFactor: 1.25 },
-        { resolution: "1920 x 1080", zoomFactor: 1 }
+        { currentZoomFactor: 1.25, defaultZoomFactor: 1, resolution: "2560 x 1440" },
+        { currentZoomFactor: 1, defaultZoomFactor: 1, resolution: "1920 x 1080" }
       ],
       title: "Observed resolutions"
     });

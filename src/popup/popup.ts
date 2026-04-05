@@ -26,6 +26,17 @@ function formatZoomFactorLabel(zoomFactor: number): string {
   return `${Math.round(zoomFactor * 100)}%`;
 }
 
+function formatZoomSummary(entry: ResolutionHistoryEntry): string {
+  const currentLabel = formatZoomFactorLabel(entry.currentZoomFactor);
+  const defaultLabel = formatZoomFactorLabel(entry.defaultZoomFactor);
+
+  if (entry.currentZoomFactor === entry.defaultZoomFactor) {
+    return currentLabel;
+  }
+
+  return `${currentLabel} · default ${defaultLabel}`;
+}
+
 export function getResolutionState(history: ResolutionHistoryEntry[]): ResolutionState {
   if (history.length === 0) {
     return {
@@ -57,7 +68,7 @@ function createResolutionList(history: ResolutionHistoryEntry[]): HTMLUListEleme
 
     const zoom = document.createElement("span");
     zoom.className = "resolution-zoom";
-    zoom.textContent = formatZoomFactorLabel(entry.zoomFactor);
+    zoom.textContent = formatZoomSummary(entry);
 
     listItem.append(value, zoom);
     list.appendChild(listItem);
