@@ -1,4 +1,9 @@
-import { recordResolution, RESOLUTION_STORAGE_KEY } from "../shared/resolution-history.js";
+import {
+  normalizeResolutionHistory,
+  recordResolution,
+  RESOLUTION_STORAGE_KEY
+} from "../shared/resolution-history.js";
+import { normalizeZoomFactor } from "../shared/zoom.js";
 import { createNormalizedScreenContext } from "../shared/screen-context.js";
 import { createWindowBoundsDebouncer } from "../shared/window-bounds-debounce.js";
 
@@ -63,13 +68,15 @@ async function persistResolutionForWindow(windowId: number): Promise<void> {
     height: screenDimensions.availHeight,
     width: screenDimensions.availWidth
   });
+  const zoomFactor = normalizeZoomFactor(await chrome.tabs.getZoom(tabId));
   const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
-  const history = Array.isArray(storedState[RESOLUTION_STORAGE_KEY])
-    ? storedState[RESOLUTION_STORAGE_KEY] as string[]
-    : [];
+  const history = normalizeResolutionHistory(storedState[RESOLUTION_STORAGE_KEY]);
 
   await chrome.storage.local.set({
-    [RESOLUTION_STORAGE_KEY]: recordResolution(history, normalizedScreenContext)
+    [RESOLUTION_STORAGE_KEY]: recordResolution(history, {
+      ...normalizedScreenContext,
+      zoomFactor
+    })
   });
 }
 

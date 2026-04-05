@@ -52,12 +52,21 @@ h1 {
 }
 
 .resolution-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
+  gap: 12px;
 }
 
 .resolution-value {
   font-size: 14px;
+}
+
+.resolution-zoom {
+  font-size: 12px;
+  color: #a1a1aa;
 }

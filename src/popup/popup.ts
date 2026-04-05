@@ -1,8 +1,13 @@
 export const RESOLUTION_STORAGE_KEY = "windowResolutionHistory";
 
+import {
+  normalizeResolutionHistory,
+  type ResolutionHistoryEntry
+} from "../shared/resolution-history.js";
+
 export type ResolutionState = {
   helperText: string;
-  history: string[];
+  history: ResolutionHistoryEntry[];
   title: string;
 };
 
@@ -17,7 +22,11 @@ function createParagraph(className: string, text: string): HTMLParagraphElement 
   return paragraph;
 }
 
-export function getResolutionState(history: string[]): ResolutionState {
+function formatZoomFactorLabel(zoomFactor: number): string {
+  return `${Math.round(zoomFactor * 100)}%`;
+}
+
+export function getResolutionState(history: ResolutionHistoryEntry[]): ResolutionState {
   if (history.length === 0) {
     return {
       helperText: "Resize or move a Chrome window to capture a resolution.",
@@ -33,26 +42,31 @@ export function getResolutionState(history: string[]): ResolutionState {
   };
 }
 
-function createResolutionList(history: string[]): HTMLUListElement {
+function createResolutionList(history: ResolutionHistoryEntry[]): HTMLUListElement {
   const list = document.createElement("ul");
   list.className = "resolution-list";
   list.setAttribute("aria-label", "Observed screen resolutions");
 
-  for (const resolution of history) {
+  for (const entry of history) {
     const listItem = document.createElement("li");
     listItem.className = "resolution-item";
+
     const value = document.createElement("span");
     value.className = "resolution-value";
-    value.textContent = resolution;
+    value.textContent = entry.resolution;
 
-    listItem.append(value);
+    const zoom = document.createElement("span");
+    zoom.className = "resolution-zoom";
+    zoom.textContent = formatZoomFactorLabel(entry.zoomFactor);
+
+    listItem.append(value, zoom);
     list.appendChild(listItem);
   }
 
   return list;
 }
 
-function renderResolutionState(history: string[]): void {
+function renderResolutionState(history: ResolutionHistoryEntry[]): void {
   if (!app) {
     return;
   }
@@ -73,19 +87,17 @@ function renderResolutionState(history: string[]): void {
   app.replaceChildren(section);
 }
 
-function renderResolutionList(history: string[]): void {
+function renderResolutionList(history: unknown): void {
   if (!app) {
     return;
   }
 
-  renderResolutionState(history);
+  renderResolutionState(normalizeResolutionHistory(history));
 }
 
 async function loadResolutionHistory(): Promise<void> {
   const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
-  const history = Array.isArray(storedState[RESOLUTION_STORAGE_KEY])
-    ? storedState[RESOLUTION_STORAGE_KEY] as string[]
-    : [];
+  const history = normalizeResolutionHistory(storedState[RESOLUTION_STORAGE_KEY]);
 
   renderResolutionList(history);
 }
@@ -99,6 +111,6 @@ if (typeof chrome !== "undefined" && app) {
     }
 
     const nextHistory = changes[RESOLUTION_STORAGE_KEY]?.newValue;
-    renderResolutionList(Array.isArray(nextHistory) ? nextHistory as string[] : []);
+    renderResolutionList(nextHistory);
   });
 }
