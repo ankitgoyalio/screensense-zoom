@@ -9,13 +9,11 @@ type ResolutionLike = {
 };
 
 type ResolutionWithZoom = ResolutionLike & {
-  currentZoomFactor?: number;
   defaultZoomFactor?: number;
   zoomFactor?: number;
 };
 
 export type ResolutionHistoryEntry = {
-  currentZoomFactor: number;
   defaultZoomFactor: number;
   resolution: string;
 };
@@ -36,7 +34,6 @@ function isResolutionHistoryEntry(value: unknown): value is ResolutionHistoryEnt
   const candidate = value as Partial<ResolutionHistoryEntry>;
   return (
     typeof candidate.resolution === "string" &&
-    Number.isFinite(candidate.currentZoomFactor) &&
     Number.isFinite(candidate.defaultZoomFactor)
   );
 }
@@ -49,7 +46,6 @@ export function normalizeResolutionHistory(history: unknown): ResolutionHistoryE
   return history.flatMap((entry) => {
     if (typeof entry === "string") {
       return [{
-        currentZoomFactor: DEFAULT_ZOOM_FACTOR,
         defaultZoomFactor: DEFAULT_ZOOM_FACTOR,
         resolution: entry,
       }];
@@ -57,7 +53,6 @@ export function normalizeResolutionHistory(history: unknown): ResolutionHistoryE
 
     if (isResolutionHistoryEntry(entry)) {
       return [{
-        currentZoomFactor: normalizeZoomFactor(entry.currentZoomFactor),
         defaultZoomFactor: normalizeZoomFactor(entry.defaultZoomFactor),
         resolution: entry.resolution,
       }];
@@ -69,8 +64,7 @@ export function normalizeResolutionHistory(history: unknown): ResolutionHistoryE
 
       if (typeof legacyEntry.resolution === "string" && typeof legacyZoomFactor === "number") {
         return [{
-          currentZoomFactor: normalizeZoomFactor(legacyZoomFactor),
-          defaultZoomFactor: DEFAULT_ZOOM_FACTOR,
+          defaultZoomFactor: normalizeZoomFactor(legacyZoomFactor),
           resolution: legacyEntry.resolution
         }];
       }
@@ -87,9 +81,6 @@ export function recordResolution(
 ): ResolutionHistoryEntry[] {
   const formattedResolution = formatResolution(resolution);
   const nextEntry = {
-    currentZoomFactor: normalizeZoomFactor(
-      resolution.currentZoomFactor ?? resolution.zoomFactor ?? DEFAULT_ZOOM_FACTOR
-    ),
     defaultZoomFactor: normalizeZoomFactor(resolution.defaultZoomFactor ?? DEFAULT_ZOOM_FACTOR),
     resolution: formattedResolution,
   };

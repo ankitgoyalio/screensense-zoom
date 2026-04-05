@@ -1,4 +1,9 @@
 import {
+  DOMAIN_ZOOM_STORAGE_KEY,
+  getDomainZoomKey,
+  updateDomainZoomMap
+} from "../shared/domain-zoom.js";
+import {
   normalizeResolutionHistory,
   recordResolution,
   RESOLUTION_STORAGE_KEY
@@ -29,14 +34,25 @@ export function shouldCaptureForTabUpdate(
   return changeInfo.status === "complete" && getValidWindowId(tab.windowId) !== null;
 }
 
-async function getActiveTabId(windowId: number): Promise<number | null> {
+async function getActiveTab(
+  windowId: number
+): Promise<{ tabId: number; url: string | undefined } | null> {
   const tabs = await chrome.tabs.query({
     active: true,
     windowId
   });
-  const tabId = tabs[0]?.id;
+  const activeTab = tabs[0];
+  const tabId = activeTab?.id;
+  const url = activeTab?.url;
 
-  return typeof tabId === "number" ? tabId : null;
+  if (typeof tabId !== "number") {
+    return null;
+  }
+
+  return {
+    tabId,
+    url
+  };
 }
 
 async function getScreenDimensionsFromTab(tabId: number): Promise<WindowScreenDimensions | null> {
@@ -81,14 +97,84 @@ async function getZoomStateForTab(tabId: number): Promise<{
   };
 }
 
-async function persistResolutionForWindow(windowId: number): Promise<void> {
-  const tabId = await getActiveTabId(windowId);
+export function getDomainZoomPayload(
+  url: string | undefined,
+  zoomState: {
+    currentZoomFactor: number;
+    defaultZoomFactor: number;
+  }
+): {
+  defaultZoomFactor: number;
+  domainKey: string;
+  zoomFactor: number;
+} | null {
+  const domainKey = getDomainZoomKey(url);
 
-  if (tabId === null) {
+  if (domainKey === null) {
+    return null;
+  }
+
+  return {
+    defaultZoomFactor: zoomState.defaultZoomFactor,
+    domainKey,
+    zoomFactor: zoomState.currentZoomFactor
+  };
+}
+
+export function shouldPersistZoomChange(
+  zoomChangeInfo: {
+    newZoomFactor: number;
+    oldZoomFactor: number;
+    tabId: number;
+    zoomSettings: {
+      defaultZoomFactor?: number;
+    };
+  },
+  tabUrl: string | undefined
+): boolean {
+  return getDomainZoomPayload(tabUrl, {
+    currentZoomFactor: zoomChangeInfo.newZoomFactor,
+    defaultZoomFactor: normalizeZoomFactor(zoomChangeInfo.zoomSettings.defaultZoomFactor ?? 1)
+  }) !== null;
+}
+
+async function persistDomainZoomForTab(
+  url: string | undefined,
+  zoomState: {
+    currentZoomFactor: number;
+    defaultZoomFactor: number;
+  }
+): Promise<void> {
+  const domainZoomPayload = getDomainZoomPayload(url, zoomState);
+
+  if (domainZoomPayload === null) {
     return;
   }
 
-  const screenDimensions = await getScreenDimensionsFromTab(tabId);
+  const storedState = await chrome.storage.local.get(DOMAIN_ZOOM_STORAGE_KEY);
+  const domainZoomMap =
+    typeof storedState[DOMAIN_ZOOM_STORAGE_KEY] === "object" && storedState[DOMAIN_ZOOM_STORAGE_KEY] !== null
+      ? storedState[DOMAIN_ZOOM_STORAGE_KEY] as Record<string, number>
+      : {};
+
+  await chrome.storage.local.set({
+    [DOMAIN_ZOOM_STORAGE_KEY]: updateDomainZoomMap(
+      domainZoomMap,
+      domainZoomPayload.domainKey,
+      domainZoomPayload.zoomFactor,
+      domainZoomPayload.defaultZoomFactor
+    )
+  });
+}
+
+async function persistResolutionForWindow(windowId: number): Promise<void> {
+  const activeTab = await getActiveTab(windowId);
+
+  if (activeTab === null) {
+    return;
+  }
+
+  const screenDimensions = await getScreenDimensionsFromTab(activeTab.tabId);
 
   if (screenDimensions === null) {
     return;
@@ -98,16 +184,18 @@ async function persistResolutionForWindow(windowId: number): Promise<void> {
     height: screenDimensions.availHeight,
     width: screenDimensions.availWidth
   });
-  const zoomState = await getZoomStateForTab(tabId);
+  const zoomState = await getZoomStateForTab(activeTab.tabId);
   const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
   const history = normalizeResolutionHistory(storedState[RESOLUTION_STORAGE_KEY]);
 
   await chrome.storage.local.set({
     [RESOLUTION_STORAGE_KEY]: recordResolution(history, {
       ...normalizedScreenContext,
-      ...zoomState
+      defaultZoomFactor: zoomState.defaultZoomFactor
     })
   });
+
+  await persistDomainZoomForTab(activeTab.url, zoomState);
 }
 
 const windowBoundsDebouncer = createWindowBoundsDebouncer({
@@ -145,5 +233,20 @@ if (typeof chrome !== "undefined") {
 
   chrome.windows.onFocusChanged.addListener((windowId) => {
     scheduleResolutionCapture(windowId);
+  });
+
+  chrome.tabs.onZoomChange.addListener((zoomChangeInfo) => {
+    void (async () => {
+      const tab = await chrome.tabs.get(zoomChangeInfo.tabId);
+
+      if (!shouldPersistZoomChange(zoomChangeInfo, tab.url)) {
+        return;
+      }
+
+      await persistDomainZoomForTab(tab.url, {
+        currentZoomFactor: normalizeZoomFactor(zoomChangeInfo.newZoomFactor),
+        defaultZoomFactor: normalizeZoomFactor(zoomChangeInfo.zoomSettings.defaultZoomFactor ?? 1)
+      });
+    })();
   });
 }
