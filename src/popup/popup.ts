@@ -1,8 +1,14 @@
-export {};
+export const RESOLUTION_STORAGE_KEY = "windowResolutionHistory";
 
-const RESOLUTION_STORAGE_KEY = "windowResolutionHistory";
+export type ResolutionState = {
+  helperText: string;
+  history: string[];
+  title: string;
+};
 
-const app = document.querySelector<HTMLDivElement>("#app");
+const app = typeof document === "undefined"
+  ? null
+  : document.querySelector<HTMLDivElement>("#app");
 
 function createParagraph(className: string, text: string): HTMLParagraphElement {
   const paragraph = document.createElement("p");
@@ -11,47 +17,60 @@ function createParagraph(className: string, text: string): HTMLParagraphElement 
   return paragraph;
 }
 
-function renderEmptyState(): void {
-  if (!app) {
-    return;
+export function getResolutionState(history: string[]): ResolutionState {
+  if (history.length === 0) {
+    return {
+      helperText: "Resize or move a Chrome window to capture a resolution.",
+      history: [],
+      title: "No resolutions recorded"
+    };
   }
 
-  const emptyState = document.createElement("div");
-  emptyState.className = "empty-state";
-  emptyState.append(
-    createParagraph("empty-kicker", "Awaiting signal"),
-    createParagraph("empty-copy", "Resize or move a Chrome window to capture a resolution.")
-  );
-
-  app.replaceChildren(emptyState);
+  return {
+    helperText: "Most recent first.",
+    history,
+    title: "Observed resolutions"
+  };
 }
 
-function renderResolutionItems(history: string[]): void {
-  if (!app) {
-    return;
-  }
-
+function createResolutionList(history: string[]): HTMLUListElement {
   const list = document.createElement("ul");
   list.className = "resolution-list";
   list.setAttribute("aria-label", "Observed screen resolutions");
 
-  for (const [index, resolution] of history.entries()) {
+  for (const resolution of history) {
     const listItem = document.createElement("li");
     listItem.className = "resolution-item";
-
-    const indexLabel = document.createElement("span");
-    indexLabel.className = "resolution-index";
-    indexLabel.textContent = String(index + 1).padStart(2, "0");
-
     const value = document.createElement("span");
     value.className = "resolution-value";
     value.textContent = resolution;
 
-    listItem.append(indexLabel, value);
+    listItem.append(value);
     list.appendChild(listItem);
   }
 
-  app.replaceChildren(list);
+  return list;
+}
+
+function renderResolutionState(history: string[]): void {
+  if (!app) {
+    return;
+  }
+
+  const state = getResolutionState(history);
+  const section = document.createElement("section");
+  section.className = "resolution-state";
+
+  const title = createParagraph("state-title", state.title);
+  const helper = createParagraph("state-helper", state.helperText);
+
+  section.append(title, helper);
+
+  if (state.history.length > 0) {
+    section.append(createResolutionList(state.history));
+  }
+
+  app.replaceChildren(section);
 }
 
 function renderResolutionList(history: string[]): void {
@@ -59,12 +78,7 @@ function renderResolutionList(history: string[]): void {
     return;
   }
 
-  if (history.length === 0) {
-    renderEmptyState();
-    return;
-  }
-
-  renderResolutionItems(history);
+  renderResolutionState(history);
 }
 
 async function loadResolutionHistory(): Promise<void> {
@@ -76,13 +90,15 @@ async function loadResolutionHistory(): Promise<void> {
   renderResolutionList(history);
 }
 
-void loadResolutionHistory();
+if (typeof chrome !== "undefined" && app) {
+  void loadResolutionHistory();
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !(RESOLUTION_STORAGE_KEY in changes)) {
-    return;
-  }
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !(RESOLUTION_STORAGE_KEY in changes)) {
+      return;
+    }
 
-  const nextHistory = changes[RESOLUTION_STORAGE_KEY]?.newValue;
-  renderResolutionList(Array.isArray(nextHistory) ? nextHistory as string[] : []);
-});
+    const nextHistory = changes[RESOLUTION_STORAGE_KEY]?.newValue;
+    renderResolutionList(Array.isArray(nextHistory) ? nextHistory as string[] : []);
+  });
+}

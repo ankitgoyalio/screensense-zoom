@@ -18,3 +18,4 @@
 
 1. When making changes to page aesthetics, visual styling, layout polish, or UI presentation, always use the [frontend-design](/.agents/skills/frontend-design/) skill.
 2. Unless the user explicitly asks for a different visual direction, prefer a minimal, Apple-inspired aesthetic with clean spacing, restrained color, subtle hierarchy, polished motion, and low visual noise.
+3. Prefer dark mode only for UI work unless the user explicitly asks for another color mode.
