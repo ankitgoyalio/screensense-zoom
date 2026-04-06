@@ -153,7 +153,9 @@ async function persistDomainZoomForTab(
 
   const storedState = await chrome.storage.local.get(DOMAIN_ZOOM_STORAGE_KEY);
   const domainZoomMap =
-    typeof storedState[DOMAIN_ZOOM_STORAGE_KEY] === "object" && storedState[DOMAIN_ZOOM_STORAGE_KEY] !== null
+    typeof storedState[DOMAIN_ZOOM_STORAGE_KEY] === "object" &&
+    storedState[DOMAIN_ZOOM_STORAGE_KEY] !== null &&
+    !Array.isArray(storedState[DOMAIN_ZOOM_STORAGE_KEY])
       ? storedState[DOMAIN_ZOOM_STORAGE_KEY] as Record<string, number>
       : {};
 
@@ -237,16 +239,20 @@ if (typeof chrome !== "undefined") {
 
   chrome.tabs.onZoomChange.addListener((zoomChangeInfo) => {
     void (async () => {
-      const tab = await chrome.tabs.get(zoomChangeInfo.tabId);
+      try {
+        const tab = await chrome.tabs.get(zoomChangeInfo.tabId);
 
-      if (!shouldPersistZoomChange(zoomChangeInfo, tab.url)) {
-        return;
+        if (!shouldPersistZoomChange(zoomChangeInfo, tab.url)) {
+          return;
+        }
+
+        await persistDomainZoomForTab(tab.url, {
+          currentZoomFactor: normalizeZoomFactor(zoomChangeInfo.newZoomFactor),
+          defaultZoomFactor: normalizeZoomFactor(zoomChangeInfo.zoomSettings.defaultZoomFactor ?? 1)
+        });
+      } catch (error) {
+        console.error("Failed to persist zoom change:", error);
       }
-
-      await persistDomainZoomForTab(tab.url, {
-        currentZoomFactor: normalizeZoomFactor(zoomChangeInfo.newZoomFactor),
-        defaultZoomFactor: normalizeZoomFactor(zoomChangeInfo.zoomSettings.defaultZoomFactor ?? 1)
-      });
     })();
   });
 }

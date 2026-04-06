@@ -1,4 +1,5 @@
 import { normalizeZoomFactor } from "./zoom.js";
+import { getRegistrableDomain } from "./public-suffix.js";
 
 export const DOMAIN_ZOOM_STORAGE_KEY = "domainZoomFactors";
 
@@ -26,13 +27,7 @@ export function getDomainZoomKey(url: string | undefined): string | null {
       return hostname;
     }
 
-    const labels = hostname.split(".").filter(Boolean);
-
-    if (labels.length < 2) {
-      return hostname;
-    }
-
-    return labels.slice(-2).join(".");
+    return getRegistrableDomain(hostname);
   } catch {
     return null;
   }

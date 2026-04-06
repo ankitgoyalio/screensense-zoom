@@ -12,7 +12,7 @@
     "default_title": "ScreenSense Zoom",
     "default_popup": "popup/popup.html"
   },
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "permissions": ["scripting", "storage", "tabs", "windows"],
   "background": {
     "service_worker": "background/service-worker.js",

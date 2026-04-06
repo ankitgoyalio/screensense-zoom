@@ -39,7 +39,10 @@ describe("extension baseline", () => {
     expect(manifest.action?.default_popup).toBe("popup/popup.html");
     expect(manifest.background?.service_worker).toBe("background/service-worker.js");
     expect(manifest.background?.type).toBe("module");
-    expect(manifest.host_permissions).toEqual(["<all_urls>"]);
+    expect(manifest.host_permissions).toEqual([
+      "http://*/*",
+      "https://*/*"
+    ]);
     expect(manifest.permissions).toEqual(["scripting", "storage", "tabs", "windows"]);
     expect(manifest.icons).toEqual({
       "16": "icons/icon16.png",

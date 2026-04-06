@@ -32,6 +32,14 @@ export function createWindowBoundsDebouncer({
       }, delayMs);
 
       pendingTimeouts.set(windowId, timeoutId);
+    },
+
+    cancelAll(): void {
+      for (const timeoutId of pendingTimeouts.values()) {
+        clearTimeoutFn(timeoutId);
+      }
+
+      pendingTimeouts.clear();
     }
   };
 }

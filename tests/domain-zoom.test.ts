@@ -13,6 +13,8 @@ describe("domain zoom", () => {
 
   test("derives a domain zoom key from the active tab url", () => {
     expect(getDomainZoomKey("https://app.example.com/dashboard")).toBe("example.com");
+    expect(getDomainZoomKey("https://shop.example.co.uk/products")).toBe("example.co.uk");
+    expect(getDomainZoomKey("https://portal.example.com.au/login")).toBe("example.com.au");
     expect(getDomainZoomKey("https://localhost:3000/test")).toBe("localhost");
     expect(getDomainZoomKey("chrome://extensions")).toBeNull();
   });

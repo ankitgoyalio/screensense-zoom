@@ -37,4 +37,16 @@ describe("zoom", () => {
   test("rounds unsupported zoom values to two decimals", () => {
     expect(normalizeZoomFactor(1.234)).toBe(1.23);
   });
+
+  test("keeps exact supported boundary zoom factors unchanged", () => {
+    expect(normalizeZoomFactor(0.25)).toBe(0.25);
+    expect(normalizeZoomFactor(5)).toBe(5);
+    expect(normalizeZoomFactor(1)).toBe(1);
+  });
+
+  test("defaults invalid zoom factors back to the Chrome default", () => {
+    expect(normalizeZoomFactor(0)).toBe(DEFAULT_ZOOM_FACTOR);
+    expect(normalizeZoomFactor(-1)).toBe(DEFAULT_ZOOM_FACTOR);
+    expect(normalizeZoomFactor(Number.NaN)).toBe(DEFAULT_ZOOM_FACTOR);
+  });
 });
