@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { getResolutionState } from "../src/popup/popup";
+import {
+  getResolutionState,
+  RESOLUTION_STORAGE_KEY as popupResolutionStorageKey
+} from "../src/popup/popup";
+import { RESOLUTION_STORAGE_KEY as sharedResolutionStorageKey } from "../src/shared/resolution-history";
 
 describe("popup ui", () => {
   test("creates an empty state when no history exists", () => {
@@ -23,5 +27,9 @@ describe("popup ui", () => {
       ],
       title: "Observed resolutions"
     });
+  });
+
+  test("re-exports the shared resolution storage key", () => {
+    expect(popupResolutionStorageKey).toBe(sharedResolutionStorageKey);
   });
 });

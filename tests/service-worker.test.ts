@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import {
   getDomainZoomPayload,
-  shouldPersistZoomChange,
   getValidWindowId,
-  shouldCaptureForTabUpdate
+  serializeStorageMutation,
+  shouldCaptureForTabUpdate,
+  shouldPersistZoomChange
 } from "../src/background/service-worker";
 
 describe("service worker event helpers", () => {
@@ -52,5 +53,28 @@ describe("service worker event helpers", () => {
         defaultZoomFactor: 1
       }
     }, undefined)).toBe(false);
+  });
+
+  test("serializes storage mutations that target the same key", async () => {
+    const events: string[] = [];
+
+    const firstMutation = serializeStorageMutation("resolution-history", async () => {
+      events.push("first:start");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      events.push("first:end");
+    });
+    const secondMutation = serializeStorageMutation("resolution-history", async () => {
+      events.push("second:start");
+      events.push("second:end");
+    });
+
+    await Promise.all([firstMutation, secondMutation]);
+
+    expect(events).toEqual([
+      "first:start",
+      "first:end",
+      "second:start",
+      "second:end"
+    ]);
   });
 });

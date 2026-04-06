@@ -1,9 +1,10 @@
 import {
   normalizeResolutionHistory,
+  RESOLUTION_STORAGE_KEY,
   type ResolutionHistoryEntry
 } from "../shared/resolution-history.js";
 
-export const RESOLUTION_STORAGE_KEY = "windowResolutionHistory";
+export { RESOLUTION_STORAGE_KEY } from "../shared/resolution-history.js";
 
 export type ResolutionState = {
   helperText: string;
@@ -96,8 +97,13 @@ function renderResolutionList(history: unknown): void {
 }
 
 async function loadResolutionHistory(): Promise<void> {
-  const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
-  renderResolutionList(storedState[RESOLUTION_STORAGE_KEY]);
+  try {
+    const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
+    renderResolutionList(storedState[RESOLUTION_STORAGE_KEY]);
+  } catch (error) {
+    console.error("Failed to load resolution history:", error);
+    renderResolutionList([]);
+  }
 }
 
 if (typeof chrome !== "undefined" && app) {

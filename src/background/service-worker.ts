@@ -18,6 +18,24 @@ type WindowScreenDimensions = {
 };
 
 const WINDOW_ID_NONE = -1;
+const storageMutationQueues = new Map<string, Promise<void>>();
+
+export function serializeStorageMutation<T>(
+  storageKey: string,
+  task: () => Promise<T>
+): Promise<T> {
+  const previousTask = storageMutationQueues.get(storageKey) ?? Promise.resolve();
+  const nextTask = previousTask.then(task, task);
+  const barrier = nextTask.then(() => undefined, () => undefined);
+
+  storageMutationQueues.set(storageKey, barrier);
+
+  return nextTask.finally(() => {
+    if (storageMutationQueues.get(storageKey) === barrier) {
+      storageMutationQueues.delete(storageKey);
+    }
+  });
+}
 
 export function getValidWindowId(windowId: number | undefined): number | null {
   if (typeof windowId !== "number" || windowId === WINDOW_ID_NONE) {
@@ -151,21 +169,23 @@ async function persistDomainZoomForTab(
     return;
   }
 
-  const storedState = await chrome.storage.local.get(DOMAIN_ZOOM_STORAGE_KEY);
-  const domainZoomMap =
-    typeof storedState[DOMAIN_ZOOM_STORAGE_KEY] === "object" &&
-    storedState[DOMAIN_ZOOM_STORAGE_KEY] !== null &&
-    !Array.isArray(storedState[DOMAIN_ZOOM_STORAGE_KEY])
-      ? storedState[DOMAIN_ZOOM_STORAGE_KEY] as Record<string, number>
-      : {};
+  await serializeStorageMutation(DOMAIN_ZOOM_STORAGE_KEY, async () => {
+    const storedState = await chrome.storage.local.get(DOMAIN_ZOOM_STORAGE_KEY);
+    const domainZoomMap =
+      typeof storedState[DOMAIN_ZOOM_STORAGE_KEY] === "object" &&
+      storedState[DOMAIN_ZOOM_STORAGE_KEY] !== null &&
+      !Array.isArray(storedState[DOMAIN_ZOOM_STORAGE_KEY])
+        ? storedState[DOMAIN_ZOOM_STORAGE_KEY] as Record<string, number>
+        : {};
 
-  await chrome.storage.local.set({
-    [DOMAIN_ZOOM_STORAGE_KEY]: updateDomainZoomMap(
-      domainZoomMap,
-      domainZoomPayload.domainKey,
-      domainZoomPayload.zoomFactor,
-      domainZoomPayload.defaultZoomFactor
-    )
+    await chrome.storage.local.set({
+      [DOMAIN_ZOOM_STORAGE_KEY]: updateDomainZoomMap(
+        domainZoomMap,
+        domainZoomPayload.domainKey,
+        domainZoomPayload.zoomFactor,
+        domainZoomPayload.defaultZoomFactor
+      )
+    });
   });
 }
 
@@ -187,14 +207,16 @@ async function persistResolutionForWindow(windowId: number): Promise<void> {
     width: screenDimensions.availWidth
   });
   const zoomState = await getZoomStateForTab(activeTab.tabId);
-  const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
-  const history = normalizeResolutionHistory(storedState[RESOLUTION_STORAGE_KEY]);
+  await serializeStorageMutation(RESOLUTION_STORAGE_KEY, async () => {
+    const storedState = await chrome.storage.local.get(RESOLUTION_STORAGE_KEY);
+    const history = normalizeResolutionHistory(storedState[RESOLUTION_STORAGE_KEY]);
 
-  await chrome.storage.local.set({
-    [RESOLUTION_STORAGE_KEY]: recordResolution(history, {
-      ...normalizedScreenContext,
-      defaultZoomFactor: zoomState.defaultZoomFactor
-    })
+    await chrome.storage.local.set({
+      [RESOLUTION_STORAGE_KEY]: recordResolution(history, {
+        ...normalizedScreenContext,
+        defaultZoomFactor: zoomState.defaultZoomFactor
+      })
+    });
   });
 
   await persistDomainZoomForTab(activeTab.url, zoomState);
@@ -202,7 +224,9 @@ async function persistResolutionForWindow(windowId: number): Promise<void> {
 
 const windowBoundsDebouncer = createWindowBoundsDebouncer({
   run(windowId) {
-    void persistResolutionForWindow(windowId);
+    void persistResolutionForWindow(windowId).catch((error) => {
+      console.error("Failed to persist resolution for window:", error);
+    });
   }
 });
 

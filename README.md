@@ -27,7 +27,7 @@ This creates a loadable extension in `dist/`.
 1. Open `chrome://extensions`.
 2. Enable Developer Mode.
 3. Click Load unpacked.
-4. Select [dist](/dist/).
+4. Select [dist](dist/).
 
 ## Reload workflow
 
