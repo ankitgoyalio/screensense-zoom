@@ -1,47 +1,21 @@
 # AGENTS.md
 
-This repository expects coding agents to follow the rules below.
+## Source of truth
 
-## Primary references
+1. Chrome Extension APIs: [Chrome Extensions Docs](https://developer.chrome.com/docs/extensions)
+2. Web APIs: [MDN Web API Docs](https://developer.mozilla.org/docs/Web/API)
 
-Use these sources as the default reference order whenever they are relevant:
+## Development workflow
 
-1. Chrome Extension APIs: [https://developer.chrome.com/docs/extensions](https://developer.chrome.com/docs/extensions)
-2. Web APIs: [https://developer.mozilla.org/docs/Web/API](https://developer.mozilla.org/docs/Web/API)
-3. Architectural structure reference: [https://github.com/obsidianmd/obsidian-clipper.git](https://github.com/obsidianmd/obsidian-clipper.git)
+1. Always follow a Red-Green TDD approach.
+2. Prefer Bun for package management and script execution in this repo.
+3. Use `bun install` instead of `npm install`, `yarn install`, or `pnpm install`.
+4. Use `bun run <script>` instead of `npm run <script>`, `yarn run <script>`, or `pnpm run <script>`.
+5. Use `bun test` for tests when the project is using Bun's test runner. If the repo is already using another test runner, keep the existing setup unless explicitly migrating it.
+6. Never make direct changes to `package.json`. If a `package.json` change is needed, provide the exact command the user should run to make that change instead of editing the file.
 
-## Architecture expectations
+## Design workflow
 
-- Follow the same high-level architectural structure as `obsidian-clipper`.
-- Keep browser-extension responsibilities split by context, not collapsed into a single entry point.
-- Prefer a centralized background message-routing pattern.
-- Keep page DOM logic in content scripts and UI logic in dedicated UI entry points.
-- Preserve browser-specific manifests and multi-target build organization.
-
-## Runtime and package management
-
-- Always use Bun for dependency installation, script execution, and runtime tasks.
-- Prefer `bun install` over `npm install`.
-- Prefer `bun run <script>` over `npm run <script>`.
-- Do not introduce `package-lock.json` or npm-specific workflow requirements.
-- Never edit `package.json` directly.
-- If a `package.json` change is needed, tell the user exactly what to edit and let the user make that change themselves.
-
-## Skills
-
-- Whenever appropriate, invoke the `web-design-guidelines` skill for UI/UX review and standards checks.
-- Whenever appropriate, invoke the `frontend-design` skill for frontend implementation, layout, styling, and interface design work.
-- For frontend tasks, use both skills when the task benefits from both implementation and guideline review.
-
-## Delegation
-
-- Prefer spinning up sub-agents and delegating bounded tasks instead of doing all work in the main agent context.
-- Keep the main agent focused on coordination, integration, and final verification.
-- Delegate concrete implementation, investigation, or verification tasks when they can be scoped cleanly.
-- Avoid unnecessary duplication between the main agent and sub-agents.
-
-## Implementation guidance
-
-- Favor official documentation over blog posts or third-party summaries.
-- For extension behavior, check Chrome extension documentation first, then MDN when the concern is a browser or DOM API.
-- When adapting patterns from `obsidian-clipper`, preserve structure and communication boundaries rather than copying product-specific behavior.
+1. When making changes to page aesthetics, visual styling, layout polish, or UI presentation, always use the [frontend-design](/.agents/skills/frontend-design/) skill.
+2. Unless the user explicitly asks for a different visual direction, prefer a minimal, Apple-inspired aesthetic with clean spacing, restrained color, subtle hierarchy, polished motion, and low visual noise.
+3. Prefer dark mode only for UI work unless the user explicitly asks for another color mode.
